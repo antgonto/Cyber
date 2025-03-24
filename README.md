@@ -47,6 +47,8 @@ pip3 install pre-commit
 
 #### 19. Add a Github action - .github/workflows/code-quality.yml.
 
+#### 20. Add a Github action - .github/workflows/docker.yml.
+
 
 
 
