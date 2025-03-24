@@ -9,5 +9,5 @@ api = NinjaAPI(
             "tryItOutEnabled": True,
             "displayRequestDuration": True,
         }
-    )
+    ),
 )

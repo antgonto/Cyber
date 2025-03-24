@@ -51,7 +51,3 @@ pip3 install pre-commit
 ### B. Django project structure
 
 ```
-
-
-
-
