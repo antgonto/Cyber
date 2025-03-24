@@ -1,7 +1,7 @@
 [project]
 name = "Cyber"
 version = "0.1.0"
-description = Project using Ruff, Pre-commit, and SonarCloud"
+description = "Project using Ruff, Pre-commit, and SonarCloud"
 authors = [
     { name = "Antonio Gonzalez-Torres", email = "antonio@gonzalez.cr" }
 ]
