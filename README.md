@@ -1,0 +1,33 @@
+### A Django project for cyber security
+
+#### 1. Create a Django project
+
+#### 2. Install Django Ninja
+
+```
+pip3 install django-ninja
+```
+
+#### 3. Add `ninja` to `INSTALLED_APPS` in `settings.py`
+
+#### 4. Add `ninja` to `urls.py`
+
+#### 5. Create a new file `api.py` in the app folder
+
+#### 6. Create .env file with environment variables
+
+#### 7. Create class Settings in the environment.py file with the environment variables
+
+#### 8. Change the `DATABASE` and `CACHES` sections in the `settings.py` file to use the environment variables
+
+#### 9. Install and start Docker
+
+#### 10. Create Dockerfile
+
+#### 11. Create docker-compose.yml
+
+#### 12. Create .ignore file
+
+###
+
+#### 10. Create a new file `schemas.py` in the app folder

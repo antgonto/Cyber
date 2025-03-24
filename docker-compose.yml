@@ -1,0 +1,77 @@
+services:
+  entrypoint:
+    container_name: entrypoint
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    command: sh /code/entrypoint.sh
+    env_file:
+      - ./.env
+    volumes:
+      - .:/code
+    networks:
+      - cyber_network
+
+  django:
+    container_name: django
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    command: python3 -m daphne -b 0.0.0.0 app.asgi:application --port 8000
+    env_file:
+      - ./.env
+    volumes:
+      - .:/code
+    healthcheck:
+      test: curl --fail http://localhost:8000/api/v1/cyber/docs || exit 1
+    ports:
+      - "8000:8000"
+    depends_on:
+        - entrypoint
+        - redis
+        - cyber_db
+    networks:
+      - cyber_network
+
+  cyber_db:
+    container_name: cyber_db
+    image: postgres:17.4-bookworm
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+    env_file:
+      - ./.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - cyber_network
+
+  redis:
+    container_name: redis
+    image: redis:8.0-M04-bookworm
+    command: /bin/sh -c 'redis-server --requirepass ${REDIS_PASSWORD}'
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - cyber_network
+
+volumes:
+  postgres_data:
+    external: true
+  redis_data:
+      external: true
+
+networks:
+  cyber_network:
+    driver: bridge
+    name: cyber_network
+
