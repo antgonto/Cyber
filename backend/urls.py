@@ -18,10 +18,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from ninja import NinjaAPI
+from app.dash_app import dash_app
 
 api = NinjaAPI()
 
 urlpatterns = [
     path("app/", api.urls),
     path("admin/", admin.site.urls),
+    # Add dash app
+    path("dashboard/", include(dash_app.server.urls)),
 ]

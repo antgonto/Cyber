@@ -11,3 +11,5 @@ api = NinjaAPI(
         }
     ),
 )
+
+api.add_router("/users/", user_router)

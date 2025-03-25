@@ -47,7 +47,8 @@ pip3 install pre-commit
 
 #### 19. Add a Github action - .github/workflows/code-quality.yml.
 
-#### 20. Add a Github action - .github/workflows/docker.yml.
-### B. Django project structure
+#### 20. pip install django-ninja dash dash-bootstrap-components
+
+### 21. Perform database migrations everytime that a model is added.
 
 ```
