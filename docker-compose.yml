@@ -74,4 +74,3 @@ networks:
   cyber_network:
     driver: bridge
     name: cyber_network
-

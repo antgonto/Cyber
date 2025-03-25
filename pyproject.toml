@@ -9,8 +9,8 @@ authors = [
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-select = ["E", "F", "B", "I", "UP", "C90", "N"]
-ignore = ["E501"]
+lint.select = ["E", "F", "B", "I", "UP", "C90", "N"]
+lint.ignore = ["E501"]
 fix = true
 
 [tool.ruff.format]
