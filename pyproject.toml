@@ -1,7 +1,7 @@
 [project]
 name = "Cyber"
 version = "0.1.0"
-description = Project using Ruff, Pre-commit, and SonarCloud"
+description = "Project using Ruff, Pre-commit, and SonarCloud"
 authors = [
     { name = "Antonio Gonzalez-Torres", email = "antonio@gonzalez.cr" }
 ]
@@ -9,8 +9,8 @@ authors = [
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-select = ["E", "F", "B", "I", "UP", "C90", "N"]
-ignore = ["E501"]
+lint.select = ["E", "F", "B", "I", "UP", "C90", "N"]
+lint.ignore = ["E501"]
 fix = true
 
 [tool.ruff.format]
