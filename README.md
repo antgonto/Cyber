@@ -26,7 +26,7 @@ pip3 install django-ninja
 
 #### 11. Create docker-compose.yml.
 
-#### 12. Create .ignore file.
+#### 12. Create .gitignore file.
 
 #### 13. Add pyproject.toml to the project root folder to using Ruff, black, isort and mypy.
 
@@ -41,14 +41,48 @@ pip3 install pre-commit
 
 #### 17. Create a SonarQube account in sonarcloud.io.
 
-#### 19. Create a new project in SonarQube, and get the project and organization keys.
+#### 18. Create a new project in SonarQube, and get the project and organization keys.
 
-#### 18. Install the SonarQube plugin in Pycharm and configure it after generating a token.
+#### 19. Install the SonarQube plugin in Pycharm and configure it after generating a token.
 
-#### 19. Add a Github action - .github/workflows/code-quality.yml.
 
-#### 20. pip install django-ninja dash dash-bootstrap-components
+#### 20. Add a GitHub action - .github/workflows/code-quality.yml.
 
-### 21. Perform database migrations everytime that a model is added.
+#### 21. Create a Django app.
 
 ```
+python manage.py startapp app
+
+```
+
+#### 22. Create the class `APIConfig` in the `apps.py` file.
+
+#### 23. Add the app to INSTALLED_APPS in your settings.py.
+
+```python
+INSTALLED_APPS = [
+    "ninja",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.admin",
+    "app.apps.APIConfig",
+]
+```
+
+#### 24. Create your models.
+
+#### 25. Run 
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+#### 26. Create your schemas.
+
+#### 27. Create your routers.
+
+

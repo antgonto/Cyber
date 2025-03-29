@@ -1,9 +1,9 @@
-from ninja import NinjaAPI
-from ninja.openapi import Swagger
+from ninja import NinjaAPI, Swagger
 
 api = NinjaAPI(
     title="Cyber API",
     version="1.0.0",
+    auth=None,
     docs=Swagger(
         settings={
             "tryItOutEnabled": True,
@@ -12,4 +12,4 @@ api = NinjaAPI(
     ),
 )
 
-api.add_router("/users/", user_router)
+api.add_router("/users", "app.api.users.router.router", tags=["users"])

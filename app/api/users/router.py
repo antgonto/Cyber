@@ -1,20 +1,18 @@
-# backend/app/routers.py
 from ninja import Router
 from django.db import connection
 from django.http import HttpResponse
 from typing import List
 import json
-from datetime import datetime
 from .schemas import UserSchema, UserCreateSchema, UserUpdateSchema
 
-user_router = Router(tags=["users"])
+router = Router()
 
 
-@user_router.get("/", response=List[UserSchema])
+@router.get("/", response=List[UserSchema])
 def list_users(request):
     """Get all users"""
     with connection.cursor() as cursor:
-        cursor.execute("SELECT user_id, username, email, role, last_login FROM users")
+        cursor.execute(f"SELECT user_id, username, email, role, last_login FROM api_user")
         users = []
         for row in cursor.fetchall():
             user = {
@@ -28,12 +26,12 @@ def list_users(request):
         return users
 
 
-@user_router.get("/{user_id}", response=UserSchema)
+@router.get("/{user_id}", response=UserSchema)
 def get_user(request, user_id: int):
     """Get user by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT user_id, username, email, role, last_login FROM users WHERE user_id = %s",
+            "SELECT user_id, username, email, role, last_login FROM api_user WHERE user_id = %s",
             [user_id]
         )
         row = cursor.fetchone()
@@ -50,7 +48,7 @@ def get_user(request, user_id: int):
         return user
 
 
-@user_router.post("/", response=UserSchema)
+@router.post("/", response=UserSchema)
 def create_user(request, user_data: UserCreateSchema):
     """Create a new user"""
     from django.contrib.auth.hashers import make_password
@@ -58,7 +56,7 @@ def create_user(request, user_data: UserCreateSchema):
     with connection.cursor() as cursor:
         # Check if username or email already exists
         cursor.execute(
-            "SELECT user_id FROM users WHERE username = %s OR email = %s",
+            "SELECT user_id FROM api_user WHERE username = %s OR email = %s",
             [user_data.username, user_data.email]
         )
         if cursor.fetchone():
@@ -71,7 +69,7 @@ def create_user(request, user_data: UserCreateSchema):
         hashed_password = make_password(user_data.password)
         cursor.execute(
             """
-            INSERT INTO users (username, email, role, password)
+            INSERT INTO api_user (username, email, role, password)
             VALUES (%s, %s, %s, %s)
             RETURNING user_id, username, email, role, last_login
             """,
@@ -89,14 +87,14 @@ def create_user(request, user_data: UserCreateSchema):
         return user
 
 
-@user_router.put("/{user_id}", response=UserSchema)
+@router.put("/{user_id}", response=UserSchema)
 def update_user(request, user_id: int, user_data: UserUpdateSchema):
     """Update an existing user"""
     from django.contrib.auth.hashers import make_password
 
     with connection.cursor() as cursor:
         # Check if user exists
-        cursor.execute("SELECT user_id FROM users WHERE user_id = %s", [user_id])
+        cursor.execute("SELECT user_id FROM api_user WHERE user_id = %s", [user_id])
         if not cursor.fetchone():
             return HttpResponse(status=404, content=json.dumps({"detail": "User not found"}))
 
@@ -123,7 +121,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         if not update_fields:
             # If no fields to update, just return the current user
             cursor.execute(
-                "SELECT user_id, username, email, role, last_login FROM users WHERE user_id = %s",
+                "SELECT user_id, username, email, role, last_login FROM api_user WHERE user_id = %s",
                 [user_id]
             )
             row = cursor.fetchone()
@@ -142,7 +140,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         # Execute update query
         cursor.execute(
             f"""
-            UPDATE users 
+            UPDATE api_user 
             SET {", ".join(update_fields)}
             WHERE user_id = %s
             RETURNING user_id, username, email, role, last_login
@@ -161,15 +159,15 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         return user
 
 
-@user_router.delete("/{user_id}")
+@router.delete("/{user_id}")
 def delete_user(request, user_id: int):
     """Delete a user"""
     with connection.cursor() as cursor:
         # Check if user exists
-        cursor.execute("SELECT user_id FROM users WHERE user_id = %s", [user_id])
+        cursor.execute("SELECT user_id FROM api_user WHERE user_id = %s", [user_id])
         if not cursor.fetchone():
             return HttpResponse(status=404, content=json.dumps({"detail": "User not found"}))
 
         # Delete user
-        cursor.execute("DELETE FROM users WHERE user_id = %s", [user_id])
+        cursor.execute("DELETE FROM api_user WHERE user_id = %s", [user_id])
         return {"success": True}

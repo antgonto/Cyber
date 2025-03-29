@@ -1,5 +1,5 @@
 """
-URL configuration for backend project.
+URL configuration for app project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.1/topics/http/urls/
@@ -14,17 +14,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
-from ninja import NinjaAPI
-from app.dash_app import dash_app
 
-api = NinjaAPI()
+
+from django.conf import settings
+
+from app.api.api import api
 
 urlpatterns = [
-    path("app/", api.urls),
-    path("admin/", admin.site.urls),
-    # Add dash app
-    path("dashboard/", include(dash_app.server.urls)),
-]
+    path('app/v1/cyber/', api.urls),
+    path('admin/', admin.site.urls),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

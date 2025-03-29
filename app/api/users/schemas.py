@@ -1,4 +1,4 @@
-# backend/app/schemas.py
+# app/api/schemas.py
 from typing import Optional, List
 from datetime import datetime
 from ninja import Schema

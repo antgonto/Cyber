@@ -1,7 +1,7 @@
 FROM python:3.12.2-bookworm
 
-RUN addgroup --system --gid 1000 app  \
-    && adduser --system --uid 1001 --shell /sbin/nologin --home /opt/app --ingroup app app
+RUN addgroup --system --gid 1000 api  \
+    && adduser --system --uid 1001 --shell /sbin/nologin --home /opt/api --ingroup api api
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
