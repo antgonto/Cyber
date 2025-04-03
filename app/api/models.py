@@ -29,3 +29,14 @@ class User(models.Model):
 
     def __str__(self):
         return self.username
+
+class Asset(models.Model):
+    asset_id = models.AutoField(primary_key=True)
+    asset_name = models.CharField(max_length=150, unique=True)
+    asset_type = models.CharField(max_length=50, unique=True)
+    location = models.CharField(max_length=50, unique=True)
+    owner = models.CharField(max_length=100, unique=True)
+    criticality_level = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.asset_name

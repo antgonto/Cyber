@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile
     platform: linux/amd64
-    command: python3 -m daphne -b 0.0.0.0 api.asgi:application --port 8000
+    command: sh -c "python3 manage.py migrate && python3 -m daphne -b 0.0.0.0 app.asgi:application --port 8000"
     env_file:
       - ./.env
     volumes:
@@ -29,9 +29,9 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-        - entrypoint
-        - redis
-        - cyber_db
+      - entrypoint
+      - redis
+      - cyber_db
     networks:
       - cyber_network
 
@@ -52,6 +52,8 @@ services:
       retries: 5
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - cyber_network
 
@@ -61,14 +63,31 @@ services:
     command: /bin/sh -c 'redis-server --requirepass ${REDIS_PASSWORD}'
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - cyber_network
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./cyber
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ./cyber:/app
+      - /app/node_modules
+    depends_on:
+      - django
+    environment:
+      - REACT_APP_API_URL=http://django:8000/api
     networks:
       - cyber_network
 
 volumes:
   postgres_data:
-    external: true
   redis_data:
-      external: true
 
 networks:
   cyber_network:
