@@ -19,6 +19,7 @@
 .env.production.local
 
 staticfiles*
+node_modules/*
 
 npm-debug.log*
 yarn-debug.log*
