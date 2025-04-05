@@ -13,6 +13,7 @@ import '@elastic/eui/dist/eui_theme_amsterdam_dark.json';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import UsersList from './pages/UserList';
+import AssetsList from "./pages/AssetList";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/users" element={<UsersList />} />
+                <Route path="/assets" element={<AssetsList />} />
                 {/* Additional routes can be added here */}
               </Routes>
             </EuiFlexItem>

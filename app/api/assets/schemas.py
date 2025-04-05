@@ -26,4 +26,3 @@ class AssetUpdateSchema(Schema):
     location: Optional[str] = None
     owner: Optional[int] = None
     criticality_level: Optional[str] = None
-    role: Optional[str] = None

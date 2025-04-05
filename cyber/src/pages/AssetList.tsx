@@ -21,33 +21,33 @@ import {
   EuiFieldPassword,
   EuiSpacer
 } from '@elastic/eui';
-import { userService } from '../services/api';
+import { assetService } from '../services/api';
 
-const UsersList = () => {
-  const [users, setUsers] = useState([]);
+const AssetsList = () => {
+  const [assets, setAssets] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState({ user_id: '', username: '', email: '', role: '', password: '' });
+  const [currentAsset, setCurrentAsset] = useState({ asset_id: '', asset_name: '', asset_type: '', location: '', owner: '', criticality_level: '' });
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
+    fetchAssets();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchAssets = async () => {
     try {
-      const response = await userService.getUsers();
-      setUsers(response.data);
+      const response = await assetService.getAssets();
+      setAssets(response.data);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching assets:', error);
     }
   };
 
-  const handleOpenModal = (user = null) => {
-    if (user) {
-      setCurrentUser({ ...user, password: '' });
+  const handleOpenModal = (asset = null) => {
+    if (asset) {
+      setCurrentAsset({ ...asset, password: '' });
       setIsEditing(true);
     } else {
-      setCurrentUser({ user_id: '', username: '', email: '', role: '', password: '' });
+      setCurrentAsset({ asset_id: '', asset_name: '', asset_type: '', location: '', owner: '', criticality_level: '' });
       setIsEditing(false);
     }
     setIsModalVisible(true);
@@ -59,67 +59,71 @@ const UsersList = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCurrentUser({ ...currentUser, [name]: value });
+    setCurrentAsset({ ...currentAsset, [name]: value });
   };
 
   const handleSubmit = async () => {
     try {
       if (isEditing) {
-        const { user_id, ...userData } = currentUser;
-        await userService.updateUser(user_id, userData);
+        const { asset_id, ...assetData } = currentAsset;
+        await assetService.updateAsset(asset_id, assetData);
       } else {
-        await userService.createUser(currentUser);
+        await assetService.createAsset(currentAsset);
       }
       handleCloseModal();
-      fetchUsers();
+      fetchAssets();
     } catch (error) {
-      console.error('Error saving user:', error);
+      console.error('Error saving asset:', error);
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteAsset = async (assetId) => {
     try {
-      await userService.deleteUser(userId);
-      fetchUsers();
+      await assetService.deleteAsset(assetId);
+      fetchAssets();
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error('Error deleting asset:', error);
     }
   };
 
   const columns = [
     {
-      field: 'user_id',
+      field: 'asset_id',
       name: 'ID',
       sortable: true,
       width: '50px',
     },
     {
-      field: 'username',
-      name: 'Username',
+      field: 'asset_name',
+      name: 'Asset Name',
       sortable: true,
     },
     {
-      field: 'email',
-      name: 'Email',
+      field: 'asset_type',
+      name: 'Asset Type',
       sortable: true,
     },
     {
-      field: 'role',
-      name: 'Role',
+      field: 'location',
+      name: 'Location',
     },
     {
-      field: 'last_login',
-      name: 'Last Login',
+      field: 'owner',
+      name: 'Owner',
     },
     {
-      field: 'user_id',
+      field: 'criticality_level',
+      name: 'Criticality Level',
+    },
+    {
+      field: 'asset_id',
       name: 'Actions',
-      render: (user_id, user) => (
+      render: (asset_id, asset) => (
         <div>
           <EuiButtonIcon
             iconType="pencil"
             aria-label="Edit"
-            onClick={() => handleOpenModal(user)}
+            onClick={() => handleOpenModal(asset)}
           />
           &nbsp;
           <EuiButtonIcon
@@ -127,8 +131,8 @@ const UsersList = () => {
             color="danger"
             aria-label="Delete"
             onClick={() => {
-              if (window.confirm('Are you sure you want to delete this user?')) {
-                handleDeleteUser(user.user_id);
+              if (window.confirm('Are you sure you want to delete this asset?')) {
+                handleDeleteAsset(asset.asset_id);
               }
             }}
           />
@@ -141,41 +145,47 @@ const UsersList = () => {
     <EuiModal onClose={handleCloseModal} style={{ width: '500px' }}>
       <EuiModalHeader>
         <EuiModalHeaderTitle>
-          {isEditing ? 'Edit User' : 'Add New User'}
+          {isEditing ? 'Edit Asset' : 'Add New Asset'}
         </EuiModalHeaderTitle>
       </EuiModalHeader>
 
       <EuiModalBody>
         <EuiForm>
-          <EuiFormRow label="Username">
+          <EuiFormRow label="Asset Name">
             <EuiFieldText
-              name="username"
-              value={currentUser.username}
+              name="asset_name"
+              value={currentAsset.asset_name}
               onChange={(e) => handleInputChange(e)}
             />
           </EuiFormRow>
 
-          <EuiFormRow label="Email">
+          <EuiFormRow label="Asset Type">
             <EuiFieldText
-              name="email"
-              type="email"
-              value={currentUser.email}
+              name="asset_type"
+              value={currentAsset.asset_type}
               onChange={(e) => handleInputChange(e)}
             />
           </EuiFormRow>
 
-          <EuiFormRow label="Role">
+          <EuiFormRow label="Location">
             <EuiFieldText
-              name="role"
-              value={currentUser.role || ''}
+              name="location"
+              value={currentAsset.location || ''}
               onChange={(e) => handleInputChange(e)}
             />
           </EuiFormRow>
 
-          <EuiFormRow label="Password">
+          <EuiFormRow label="Owner">
             <EuiFieldPassword
-              name="password"
-              value={currentUser.password || ''}
+              name="owner"
+              value={currentAsset.owner || ''}
+              onChange={(e) => handleInputChange(e)}
+            />
+          </EuiFormRow>
+          <EuiFormRow label="Criticality Level">
+            <EuiFieldPassword
+              name="criticality_level"
+              value={currentAsset.criticality_level || ''}
               onChange={(e) => handleInputChange(e)}
             />
           </EuiFormRow>
@@ -201,7 +211,7 @@ const UsersList = () => {
           <EuiFlexGroup justifyContent="spaceBetween" alignItems="center">
             <EuiFlexItem grow={false}>
               <EuiTitle>
-                <h1>Users Management</h1>
+                <h1>Assets Management</h1>
               </EuiTitle>
             </EuiFlexItem>
             <EuiFlexItem grow={false}>
@@ -210,7 +220,7 @@ const UsersList = () => {
                 onClick={() => handleOpenModal()}
                 fill
               >
-                Add New User
+                Add New Asset
               </EuiButton>
             </EuiFlexItem>
           </EuiFlexGroup>
@@ -219,7 +229,7 @@ const UsersList = () => {
         <EuiSpacer size="l" />
 
         <EuiBasicTable
-          items={users}
+          items={assets}
           columns={columns}
           tableLayout="fixed"
         />
@@ -230,4 +240,4 @@ const UsersList = () => {
   );
 };
 
-export default UsersList;
+export default AssetsList;

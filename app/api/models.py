@@ -33,10 +33,21 @@ class User(models.Model):
 class Asset(models.Model):
     asset_id = models.AutoField(primary_key=True)
     asset_name = models.CharField(max_length=150, unique=True)
-    asset_type = models.CharField(max_length=50, unique=True)
-    location = models.CharField(max_length=50, unique=True)
-    owner = models.CharField(max_length=100, unique=True)
-    criticality_level = models.CharField(max_length=50, unique=True)
+    asset_type = models.CharField(max_length=50)
+    location = models.CharField(max_length=50)
+    owner = models.CharField(max_length=100)
+    criticality_level = models.CharField(max_length=50)
 
     def __str__(self):
         return self.asset_name
+
+class Vulnerability(models.Model):
+    vulnerability_id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+    description = models.CharField(max_length=200)
+    severity = models.CharField(max_length=50)
+    cve_reference = models.CharField(max_length=100)
+    remediation_steps = models.CharField(max_length=500)
+
+    def __str__(self):
+        return self.title

@@ -17,6 +17,14 @@ export const userService = {
   deleteUser: (id) => api.delete(`/app/v1/cyber/users/${id}`),
 };
 
+export const assetService = {
+  getAssets: () => api.get('/app/v1/cyber/assets/'),
+  getAsset: (id) => api.get(`/app/v1/cyber/assets/${id}`),
+  createAsset: (assetData) => api.post('/app/v1/cyber/assets/', assetData),
+  updateAsset: (id, assetData) => api.put(`/app/v1/cyber/assets/${id}`, assetData),
+  deleteAsset: (id) => api.delete(`/app/v1/cyber/assets/${id}`),
+};
+
 // Additional services can be added here as new endpoints are created
 
 export default api;
