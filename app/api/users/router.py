@@ -5,14 +5,13 @@ from typing import List
 import json
 from .schemas import UserSchema, UserCreateSchema, UserUpdateSchema
 
-router = Router()
-
+router = Router(tags=["Users"])
 
 @router.get("/", response=List[UserSchema])
 def list_users(request):
     """Get all users"""
     with connection.cursor() as cursor:
-        cursor.execute(f"SELECT user_id, username, email, role, last_login FROM api_user")
+        cursor.execute(f"SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user")
         users = []
         for row in cursor.fetchall():
             user = {
@@ -21,6 +20,8 @@ def list_users(request):
                 "email": row[2],
                 "role": row[3],
                 "last_login": row[4],
+                "is_active": row[5],
+                "date_joined": row[6],
             }
             users.append(user)
         return users
@@ -31,7 +32,7 @@ def get_user(request, user_id: int):
     """Get user by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT user_id, username, email, role, last_login FROM api_user WHERE user_id = %s",
+            "SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user WHERE user_id = %s",
             [user_id]
         )
         row = cursor.fetchone()
@@ -44,7 +45,10 @@ def get_user(request, user_id: int):
             "email": row[2],
             "role": row[3],
             "last_login": row[4],
+            "is_active": row[5],
+            "date_joined": row[6],
         }
+
         return user
 
 
@@ -67,11 +71,12 @@ def create_user(request, user_data: UserCreateSchema):
 
         # Insert new user
         hashed_password = make_password(user_data.password)
+
         cursor.execute(
             """
-            INSERT INTO api_user (username, email, role, password)
-            VALUES (%s, %s, %s, %s)
-            RETURNING user_id, username, email, role, last_login
+            INSERT INTO api_user (username, email, role, password, last_login, date_joined)
+            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING user_id, username, email, role, last_login, is_active, date_joined
             """,
             [user_data.username, user_data.email, user_data.role, hashed_password]
         )
@@ -83,6 +88,8 @@ def create_user(request, user_data: UserCreateSchema):
             "email": row[2],
             "role": row[3],
             "last_login": row[4],
+            "is_active": row[5],
+            "date_joined": row[6],
         }
         return user
 
@@ -121,7 +128,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         if not update_fields:
             # If no fields to update, just return the current user
             cursor.execute(
-                "SELECT user_id, username, email, role, last_login FROM api_user WHERE user_id = %s",
+                "SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user WHERE user_id = %s",
                 [user_id]
             )
             row = cursor.fetchone()
@@ -131,6 +138,8 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
                 "email": row[2],
                 "role": row[3],
                 "last_login": row[4],
+                "is_active": row[5],
+                "date_joined": row[6],
             }
             return user
 
@@ -143,7 +152,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
             UPDATE api_user 
             SET {", ".join(update_fields)}
             WHERE user_id = %s
-            RETURNING user_id, username, email, role, last_login
+            RETURNING user_id, username, email, role, last_login, is_active, date_joined
             """,
             params
         )
@@ -155,6 +164,8 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
             "email": row[2],
             "role": row[3],
             "last_login": row[4],
+            "is_active": row[5],
+            "date_joined": row[6],
         }
         return user
 
@@ -171,3 +182,22 @@ def delete_user(request, user_id: int):
         # Delete user
         cursor.execute("DELETE FROM api_user WHERE user_id = %s", [user_id])
         return {"success": True}
+
+@router.post("/activity/log", response=dict)
+def log_user_activity(request, activity: dict):
+    """Log user activity"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO user_activity_logs 
+            (user_id, activity_type, timestamp, description)
+            VALUES (%s, %s, %s, %s)
+            """,
+            [
+                request.user.id, activity["action"],
+                activity["entity_type"], activity["entity_id"],
+                json.dumps(activity["details"])
+            ]
+        )
+
+    return {"success": True, "message": "Activity logged"}

@@ -14,6 +14,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import UsersList from './pages/UserList';
 import AssetsList from "./pages/AssetList";
+import VulnerabilityList from "./pages/VulnerabilityList";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/users" element={<UsersList />} />
                 <Route path="/assets" element={<AssetsList />} />
+                <Route path="/vulnerabilities" element={<VulnerabilityList />} />
                 {/* Additional routes can be added here */}
               </Routes>
             </EuiFlexItem>

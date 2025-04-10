@@ -25,6 +25,14 @@ export const assetService = {
   deleteAsset: (id) => api.delete(`/app/v1/cyber/assets/${id}`),
 };
 
+export const vulnerabilityService = {
+  getVulnerabilities: () => api.get('/app/v1/cyber/vulnerabilities/'),
+  getVulnerability: (id) => api.get(`/app/v1/cyber/vulnerabilities/${id}`),
+  createVulnerability: (vulnerabilityData) => api.post('/app/v1/cyber/vulnerabilities/', vulnerabilityData),
+  updateVulnerability: (id, vulnerabilityData) => api.put(`/app/v1/cyber/vulnerabilities/${id}`, vulnerabilityData),
+  deleteVulnerability: (id) => api.delete(`/app/v1/cyber/vulnerabilities/${id}`),
+};
+
 // Additional services can be added here as new endpoints are created
 
 export default api;

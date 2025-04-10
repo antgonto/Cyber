@@ -6,14 +6,14 @@ import json
 
 from app.api.vulnerabilities.schemas import VulnerabilitySchema, VulnerabilityCreateSchema, VulnerabilityUpdateSchema
 
-router = Router()
+router = Router(tags=["Vulnerabilities"])
 
 
 @router.get("/", response=List[VulnerabilitySchema])
 def list_vulnerabilities(request):
     """Get all vulnerabilities"""
     with connection.cursor() as cursor:
-        cursor.execute(f"SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability")
+        cursor.execute("SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability")
         vulnerabilities = []
         for row in cursor.fetchall():
             vulnerability = {
@@ -33,7 +33,7 @@ def get_vulnerability(request, vulnerability_id: int):
     """Get vulnerability by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
-            f"SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
+            "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
             [vulnerability_id]
         )
         row = cursor.fetchone()
@@ -124,7 +124,7 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
         if not update_fields:
             # If no fields to update, just return the current vulnerability
             cursor.execute(
-                f"SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
+                "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
                 [vulnerability_id]
             )
             row = cursor.fetchone()

@@ -5,8 +5,8 @@ from typing import List
 import json
 from .schemas import AssetSchema, AssetCreateSchema, AssetUpdateSchema
 
-router = Router()
 
+router = Router(tags=["Assets"])
 
 @router.get("/", response=List[AssetSchema])
 def list_assets(request):
@@ -32,7 +32,7 @@ def get_asset(request, asset_id: int):
     """Get asset by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
-            f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset WHERE user_id = %s",
+            f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset WHERE asset_id = %s",
             [asset_id]
         )
         row = cursor.fetchone()
@@ -94,7 +94,10 @@ def update_asset(request, asset_id: int, asset_data: AssetUpdateSchema):
         # Check if asset exists
         cursor.execute("SELECT asset_id FROM api_asset WHERE asset_id = %s", [asset_id])
         if not cursor.fetchone():
-            return HttpResponse(status=404, content=json.dumps({"detail": "Asset not found"}))
+            return HttpResponse(
+                status=404,
+                content=json.dumps({"detail": "Asset not found"})
+            )
 
         # Build update query dynamically based on provided fields
         update_fields = []
@@ -123,7 +126,7 @@ def update_asset(request, asset_id: int, asset_data: AssetUpdateSchema):
         if not update_fields:
             # If no fields to update, just return the current asset
             cursor.execute(
-                f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset WHERE user_id = %s",
+                f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset WHERE asset_id = %s",
                 [asset_id]
             )
             row = cursor.fetchone()
@@ -174,4 +177,4 @@ def delete_asset(request, asset_id: int):
 
         # Delete asset
         cursor.execute("DELETE FROM api_asset WHERE asset_id = %s", [asset_id])
-        return {"success": True}
+        return {"success": True, "message": "Asset deleted"}

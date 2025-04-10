@@ -15,3 +15,4 @@ api = NinjaAPI(
 api.add_router("/users", "app.api.users.router.router", tags=["users"])
 api.add_router("/assets", "app.api.assets.router.router", tags=["assets"])
 api.add_router("/vulnerabilities", "app.api.vulnerabilities.router.router", tags=["vulnerabilities"])
+api.add_router("/alerts", "app.api.alerts.router.router", tags=["alerts"])
