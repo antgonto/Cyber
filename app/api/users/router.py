@@ -5,7 +5,7 @@ from typing import List
 import json
 from .schemas import UserSchema, UserCreateSchema, UserUpdateSchema
 
-router = Router(tags=["Users"])
+router = Router(tags=["users"])
 
 @router.get("/", response=List[UserSchema])
 def list_users(request):
@@ -25,32 +25,6 @@ def list_users(request):
             }
             users.append(user)
         return users
-
-
-@router.get("/{user_id}", response=UserSchema)
-def get_user(request, user_id: int):
-    """Get user by ID"""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user WHERE user_id = %s",
-            [user_id]
-        )
-        row = cursor.fetchone()
-        if not row:
-            return HttpResponse(status=404, content=json.dumps({"detail": "User not found"}))
-
-        user = {
-            "user_id": row[0],
-            "username": row[1],
-            "email": row[2],
-            "role": row[3],
-            "last_login": row[4],
-            "is_active": row[5],
-            "date_joined": row[6],
-        }
-
-        return user
-
 
 @router.post("/", response=UserSchema)
 def create_user(request, user_data: UserCreateSchema):
@@ -93,6 +67,29 @@ def create_user(request, user_data: UserCreateSchema):
         }
         return user
 
+@router.get("/{user_id}", response=UserSchema)
+def get_user(request, user_id: int):
+    """Get user by ID"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user WHERE user_id = %s",
+            [user_id]
+        )
+        row = cursor.fetchone()
+        if not row:
+            return HttpResponse(status=404, content=json.dumps({"detail": "User not found"}))
+
+        user = {
+            "user_id": row[0],
+            "username": row[1],
+            "email": row[2],
+            "role": row[3],
+            "last_login": row[4],
+            "is_active": row[5],
+            "date_joined": row[6],
+        }
+
+        return user
 
 @router.put("/{user_id}", response=UserSchema)
 def update_user(request, user_id: int, user_data: UserUpdateSchema):
@@ -149,7 +146,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         # Execute update query
         cursor.execute(
             f"""
-            UPDATE api_user 
+            UPDATE api_user
             SET {", ".join(update_fields)}
             WHERE user_id = %s
             RETURNING user_id, username, email, role, last_login, is_active, date_joined
@@ -189,7 +186,7 @@ def log_user_activity(request, activity: dict):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO user_activity_logs 
+            INSERT INTO user_activity_logs
             (user_id, activity_type, timestamp, description)
             VALUES (%s, %s, %s, %s)
             """,

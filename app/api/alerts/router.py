@@ -1,15 +1,16 @@
-import json
-
-from django.http import HttpResponse
 from ninja import Router
 from django.db import connection
+from django.http import HttpResponse
+from typing import List, Optional
+import json
 
 from app.api.alerts.schemas import AlertSchema
 
-router = Router(tags=["Alerts"])
+router = Router(tags=["alerts"])
 
-@router.get("/", response=list[AlertSchema])
+@router.get("/", response=List[AlertSchema])
 def list_alerts(request):
+    """Get all alerts"""
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT alert_id, source, alert_type, alert_time, severity, status, incident_id
@@ -30,8 +31,33 @@ def list_alerts(request):
             alerts.append(alert)
         return alerts
 
+@router.post("/", response=AlertSchema)
+def create_alert(request, alert: AlertSchema):
+    """Create a new alert"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO api_alert (source, alert_type, alert_time, severity, status)
+            VALUES (%s, %s, NOW(), %s, %s)
+            RETURNING alert_id, source, alert_type, alert_time, severity, status, incident_id
+            """,
+            [alert.source, alert.alert_type, alert.severity, 'new']
+        )
+        row = cursor.fetchone()
+        alert = {
+            "alert_id": row[0],
+            "source": row[1],
+            "alert_type": row[2],
+            "alert_time": row[3],
+            "severity": row[4],
+            "status": row[5],
+            "incident_id": row[6],
+        }
+        return alert
+
 @router.get("/{alert_id}", response=AlertSchema)
 def get_alert(request, alert_id: int):
+    """Get alert by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT alert_id, source, alert_type, alert_time, severity, status, incident_id FROM api_alert WHERE alert_id = %s",
@@ -53,42 +79,10 @@ def get_alert(request, alert_id: int):
         }
         return alert
 
-@router.post("/", response=AlertSchema)
-def create_alert(request, alert: AlertSchema):
-    with connection.cursor() as cursor:
-        if hasattr(alert, 'alert_id') and alert.alert_id:
-            cursor.execute(
-                "SELECT alert_id FROM api_alert WHERE alert_id = %s",
-                [alert.alert_id]
-            )
-            if cursor.fetchone():
-                return HttpResponse(
-                    status=409,
-                    content=json.dumps({"detail": "Alert with this ID already exists"})
-                )
-
-        cursor.execute(
-            """
-            INSERT INTO api_alert (source, alert_type, alert_time, severity, status)
-            VALUES (%s, %s, NOW(), %s, %s)
-            RETURNING alert_id, source, alert_type, alert_time, severity, status, incident_id
-            """,
-            [alert.source, alert.alert_type, alert.severity, 'new']
-        )
-        row = cursor.fetchone()
-        alert = {
-            "alert_id": row[0],
-            "source": row[1],
-            "alert_type": row[2],
-            "alert_time": row[3],
-            "severity": row[4],
-            "status": row[5],
-            "incident_id": row[6],
-        }
-        return alert
 
 @router.put("/{alert_id}", response=AlertSchema)
 def update_alert(request, alert_id: int, alert: AlertSchema):
+    """Update an existing alert"""
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT alert_id FROM api_alert WHERE alert_id = %s",
@@ -112,10 +106,6 @@ def update_alert(request, alert_id: int, alert: AlertSchema):
             update_fields.append("alert_type = %s")
             params.append(alert.alert_type)
 
-        if alert.alert_time:
-            update_fields.append("alert_time = %s")
-            params.append(alert.alert_time)
-
         if alert.severity:
             update_fields.append("severity = %s")
             params.append(alert.severity)
@@ -135,7 +125,6 @@ def update_alert(request, alert_id: int, alert: AlertSchema):
                 [alert_id]
             )
             row = cursor.fetchone()
-
             alert = {
                 "alert_id": row[0],
                 "source": row[1],
@@ -171,11 +160,11 @@ def update_alert(request, alert_id: int, alert: AlertSchema):
             "status": row[5],
             "incident_id": row[6]
         }
-
         return alert
 
 @router.delete("/{alert_id}", response=dict)
 def delete_alert(request, alert_id: int):
+    """Delete an alert"""
     with connection.cursor() as cursor:
         # Check if alert exists
         cursor.execute("SELECT alert_id FROM api_alert WHERE alert_id = %s", [alert_id])

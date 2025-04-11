@@ -1,5 +1,7 @@
 from django.db import models
 
+from app.api.incidents.models import Incident
+
 
 class Alert(models.Model):
     class SeverityChoices(models.TextChoices):
@@ -16,11 +18,12 @@ class Alert(models.Model):
 
     alert_id = models.AutoField(primary_key=True)
     source = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
     alert_type = models.CharField(max_length=100)  # alert_type in SQL becomes type in model
     alert_time = models.DateTimeField(auto_now_add=True)
     severity = models.CharField(max_length=50, choices=SeverityChoices.choices)
     status = models.CharField(max_length=50, choices=StatusChoices.choices, default=StatusChoices.NEW)
-    incident = models.ForeignKey('Incident', on_delete=models.SET_NULL, null=True, blank=True,
+    incident = models.ForeignKey(Incident, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='alerts')
 
     def __str__(self):

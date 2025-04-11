@@ -12,7 +12,7 @@ from .schemas import (
 )
 from ..alerts.schemas import AlertListSchema
 
-router = Router(tags=["Incidents"])
+router = Router(tags=["incidents"])
 
 
 @router.get("/", response=IncidentListSchema)
@@ -77,6 +77,38 @@ def list_incidents(request, status: Optional[str] = None, severity: Optional[str
         "count": count
     }
 
+@router.post("/", response=IncidentCreateResponseSchema)
+def create_incident(request, payload: IncidentSchema):
+    """Create a new incident"""
+    from django.db import connection
+
+    incident_data = payload.dict(exclude_unset=True, exclude_none=True)
+
+    # Check if assigned user exists
+    if incident_data.get("assigned_to_id"):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM auth_user WHERE id = %s", [incident_data["assigned_to_id"]])
+            if cursor.fetchone()[0] == 0:
+                from django.http import Http404
+                raise Http404("User not found")
+
+    # Build SQL insert
+    fields = incident_data.keys()
+    placeholders = ["%s" for _ in fields]
+    values = [incident_data[field] for field in fields]
+
+    insert_sql = f"""
+    INSERT INTO api_incident ({', '.join(fields)})
+    VALUES ({', '.join(placeholders)})
+    RETURNING incident_id
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(insert_sql, values)
+        incident_id = cursor.fetchone()[0]
+
+    return {"incident_id": incident_id}
+
 
 @router.get("/{incident_id}", response=IncidentDetailSchema)
 def get_incident(request, incident_id: int):
@@ -131,7 +163,7 @@ def get_incident(request, incident_id: int):
 
     # Get related threats
     threats_sql = """
-        SELECT t.threat_id, t.threat_actor_name, t.indicator_type, t.indicator_value, 
+        SELECT t.threat_id, t.threat_actor_name, t.indicator_type, t.indicator_value,
                t.confidence_level, t.description, t.related_cve
         FROM api_threatintelligence t
         JOIN threat_incident_association a ON t.threat_id = a.threat_id
@@ -158,39 +190,6 @@ def get_incident(request, incident_id: int):
     })
 
     return incident
-
-
-@router.post("/", response=IncidentCreateResponseSchema)
-def create_incident(request, payload: IncidentSchema):
-    """Create a new incident"""
-    from django.db import connection
-
-    incident_data = payload.dict(exclude_unset=True, exclude_none=True)
-
-    # Check if assigned user exists
-    if incident_data.get("assigned_to_id"):
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM auth_user WHERE id = %s", [incident_data["assigned_to_id"]])
-            if cursor.fetchone()[0] == 0:
-                from django.http import Http404
-                raise Http404("User not found")
-
-    # Build SQL insert
-    fields = incident_data.keys()
-    placeholders = ["%s" for _ in fields]
-    values = [incident_data[field] for field in fields]
-
-    insert_sql = f"""
-    INSERT INTO api_incident ({', '.join(fields)})
-    VALUES ({', '.join(placeholders)})
-    RETURNING incident_id
-    """
-
-    with connection.cursor() as cursor:
-        cursor.execute(insert_sql, values)
-        incident_id = cursor.fetchone()[0]
-
-    return {"incident_id": incident_id}
 
 
 @router.put("/{incident_id}", response=IncidentUpdateResponseSchema)
@@ -326,8 +325,6 @@ def remove_asset_from_incident(request, incident_id: int, asset_id: int):
 @router.get("/alerts/", response=AlertListSchema)
 def list_alerts(request, status: Optional[str] = None, severity: Optional[str] = None,
                 source: Optional[str] = None, limit: int = 50, offset: int = 0):
-    """List all alerts with optional filtering"""
-    from django.db import connection
 
     # Start building the SQL query
     sql = "SELECT * FROM api_alert"

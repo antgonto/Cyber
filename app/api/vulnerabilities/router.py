@@ -6,7 +6,7 @@ import json
 
 from app.api.vulnerabilities.schemas import VulnerabilitySchema, VulnerabilityCreateSchema, VulnerabilityUpdateSchema
 
-router = Router(tags=["Vulnerabilities"])
+router = Router(tags=["vulnerabilities"])
 
 
 @router.get("/", response=List[VulnerabilitySchema])
@@ -26,30 +26,6 @@ def list_vulnerabilities(request):
             }
             vulnerabilities.append(vulnerability)
         return vulnerabilities
-
-
-@router.get("/{vulnerability_id}", response=VulnerabilitySchema)
-def get_vulnerability(request, vulnerability_id: int):
-    """Get vulnerability by ID"""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
-            [vulnerability_id]
-        )
-        row = cursor.fetchone()
-        if not row:
-            return HttpResponse(status=404, content=json.dumps({"detail": "Vulnerability not found"}))
-
-        vulnerability = {
-            "vulnerability_id": row[0],
-            "title": row[1],
-            "description": row[2],
-            "severity": row[3],
-            "cve_reference": row[4],
-            "remediation_steps": row[5],
-        }
-        return vulnerability
-
 
 @router.post("/", response=VulnerabilitySchema)
 def create_vulnerability(request, vulnerability_data: VulnerabilityCreateSchema):
@@ -87,6 +63,27 @@ def create_vulnerability(request, vulnerability_data: VulnerabilityCreateSchema)
         }
         return vulnerability
 
+@router.get("/{vulnerability_id}", response=VulnerabilitySchema)
+def get_vulnerability(request, vulnerability_id: int):
+    """Get vulnerability by ID"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
+            [vulnerability_id]
+        )
+        row = cursor.fetchone()
+        if not row:
+            return HttpResponse(status=404, content=json.dumps({"detail": "Vulnerability not found"}))
+
+        vulnerability = {
+            "vulnerability_id": row[0],
+            "title": row[1],
+            "description": row[2],
+            "severity": row[3],
+            "cve_reference": row[4],
+            "remediation_steps": row[5],
+        }
+        return vulnerability
 
 @router.put("/{vulnerability_id}", response=VulnerabilitySchema)
 def update_vulnerability(request, vulnerability_id: int, vulnerability_data: VulnerabilityUpdateSchema):
@@ -144,10 +141,10 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
         # Execute update query
         cursor.execute(
             f"""
-            UPDATE api_vulnerability 
+            UPDATE api_vulnerability
             SET {", ".join(update_fields)}
             WHERE vulnerability_id = %s
-            RETURNING vulnerability_id, title, description, severity, cve_reference, remediation_steps            
+            RETURNING vulnerability_id, title, description, severity, cve_reference, remediation_steps
             """,
             params
         )

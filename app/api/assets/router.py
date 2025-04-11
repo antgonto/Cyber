@@ -6,7 +6,7 @@ import json
 from .schemas import AssetSchema, AssetCreateSchema, AssetUpdateSchema
 
 
-router = Router(tags=["Assets"])
+router = Router(tags=["assets"])
 
 @router.get("/", response=List[AssetSchema])
 def list_assets(request):
@@ -25,29 +25,6 @@ def list_assets(request):
             }
             assets.append(asset)
         return assets
-
-
-@router.get("/{asset_id}", response=AssetSchema)
-def get_asset(request, asset_id: int):
-    """Get asset by ID"""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset WHERE asset_id = %s",
-            [asset_id]
-        )
-        row = cursor.fetchone()
-        if not row:
-            return HttpResponse(status=404, content=json.dumps({"detail": "Asset not found"}))
-
-        asset = {
-            "asset_id": row[0],
-            "asset_name": row[1],
-            "asset_type": row[2],
-            "location": row[3],
-            "owner": row[4],
-            "criticality_level": row[5],
-        }
-        return asset
 
 
 @router.post("/", response=AssetSchema)
@@ -85,6 +62,29 @@ def create_asset(request, asset_data: AssetCreateSchema):
             "criticality_level": row[5],
         }
         return asset
+
+@router.get("/{asset_id}", response=AssetSchema)
+def get_asset(request, asset_id: int):
+    """Get asset by ID"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset WHERE asset_id = %s",
+            [asset_id]
+        )
+        row = cursor.fetchone()
+        if not row:
+            return HttpResponse(status=404, content=json.dumps({"detail": "Asset not found"}))
+
+        asset = {
+            "asset_id": row[0],
+            "asset_name": row[1],
+            "asset_type": row[2],
+            "location": row[3],
+            "owner": row[4],
+            "criticality_level": row[5],
+        }
+        return asset
+
 
 
 @router.put("/{asset_id}", response=AssetSchema)
@@ -146,10 +146,10 @@ def update_asset(request, asset_id: int, asset_data: AssetUpdateSchema):
         # Execute update query
         cursor.execute(
             f"""
-            UPDATE api_asset 
+            UPDATE api_asset
             SET {", ".join(update_fields)}
             WHERE asset_id = %s
-            RETURNING asset_id, asset_name, asset_type, location, owner, criticality_level            
+            RETURNING asset_id, asset_name, asset_type, location, owner, criticality_level
             """,
             params
         )

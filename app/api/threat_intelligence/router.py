@@ -15,7 +15,7 @@ from app.api.threat_intelligence.schemas import (
     ThreatVulnerabilityAssociationSchema
 )
 
-router = Router(tags=["Threat Intelligence"])
+router = Router(tags=["threat_intelligence"])
 
 
 def dictfetchall(cursor):
@@ -28,7 +28,7 @@ def dictfetchall(cursor):
 def list_threats(request):
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT threat_id, threat_actor_name, indicator_type, indicator_value, 
+            SELECT threat_id, threat_actor_name, indicator_type, indicator_value,
                    confidence_level, description, related_cve
             FROM threat_intelligence
             ORDER BY threat_id
@@ -40,12 +40,34 @@ def list_threats(request):
         "count": len(threats)
     }
 
+@router.post("/", response={201: ThreatIntelligenceCreateResponseSchema, 400: ErrorSchema})
+def create_threat(request, payload: ThreatIntelligenceSchema):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO threat_intelligence
+                (threat_actor_name, indicator_type, indicator_value, confidence_level, description, related_cve)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING threat_id
+            """, [
+                payload.threat_actor_name,
+                payload.indicator_type,
+                payload.indicator_value,
+                payload.confidence_level,
+                payload.description,
+                payload.related_cve
+            ])
+            threat_id = cursor.fetchone()[0]
+
+        return 201, {"threat_id": threat_id}
+    except Exception as e:
+        return 400, {"message": str(e)}
 
 @router.get("/{threat_id}", response={200: ThreatIntelligenceSchema, 404: ErrorSchema})
 def get_threat(request, threat_id: int):
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT threat_id, threat_actor_name, indicator_type, indicator_value, 
+            SELECT threat_id, threat_actor_name, indicator_type, indicator_value,
                    confidence_level, description, related_cve
             FROM threat_intelligence
             WHERE threat_id = %s
@@ -64,31 +86,6 @@ def get_threat(request, threat_id: int):
         "description": threat[5],
         "related_cve": threat[6]
     }
-
-
-@router.post("/", response={201: ThreatIntelligenceCreateResponseSchema, 400: ErrorSchema})
-def create_threat(request, payload: ThreatIntelligenceSchema):
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO threat_intelligence 
-                (threat_actor_name, indicator_type, indicator_value, confidence_level, description, related_cve)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING threat_id
-            """, [
-                payload.threat_actor_name,
-                payload.indicator_type,
-                payload.indicator_value,
-                payload.confidence_level,
-                payload.description,
-                payload.related_cve
-            ])
-            threat_id = cursor.fetchone()[0]
-
-        return 201, {"threat_id": threat_id}
-    except Exception as e:
-        return 400, {"message": str(e)}
-
 
 @router.put("/{threat_id}", response={200: ThreatIntelligenceUpdateResponseSchema, 404: ErrorSchema, 400: ErrorSchema})
 def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
