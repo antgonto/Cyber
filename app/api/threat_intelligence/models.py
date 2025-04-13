@@ -4,6 +4,7 @@ from app.api.assets.models import Asset
 from app.api.incidents.models import Incident
 from app.api.vulnerabilities.models import Vulnerability
 
+
 class ThreatIntelligence(models.Model):
     class ConfidenceLevelChoices(models.TextChoices):
         LOW = "low", "Low"
@@ -11,13 +12,23 @@ class ThreatIntelligence(models.Model):
         HIGH = "high", "High"
         VERY_HIGH = "very_high", "Very High"
 
+    class IndicatorTypeChoices(models.TextChoices):
+        IP = "ip", "IP Address"
+        DOMAIN = "domain", "Domain"
+        URL = "url", "URL"
+        FILE_HASH = "file_hash", "File Hash"
+        EMAIL = "email", "Email"
+        OTHER = "other", "Other"
+
     threat_id = models.AutoField(primary_key=True)
     threat_actor_name = models.CharField(max_length=100)
-    indicator_type = models.CharField(max_length=50)
+    indicator_type = models.CharField(max_length=50, choices=IndicatorTypeChoices.choices)
     indicator_value = models.CharField(max_length=255)
     confidence_level = models.CharField(max_length=50, choices=ConfidenceLevelChoices.choices)
     description = models.TextField()
     related_cve = models.CharField(max_length=100, null=True, blank=True)
+    date_identified = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
 
     # Many-to-many relationships
     assets = models.ManyToManyField(Asset, through='ThreatAssetAssociation')
@@ -30,6 +41,8 @@ class ThreatIntelligence(models.Model):
 
     def __str__(self):
         return f"{self.threat_actor_name} - {self.indicator_type}"
+
+
 
 class ThreatAssetAssociation(models.Model):
     threat = models.ForeignKey(ThreatIntelligence, on_delete=models.CASCADE, related_name='asset_associations')

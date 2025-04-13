@@ -7,12 +7,13 @@ from django.db import connection
 from django.http import HttpResponse, Http404
 from ninja import Router
 from .schemas import (
-    IncidentSchema, IncidentAssetSchema,
-    IncidentListSchema, IncidentDetailSchema,
-    IncidentCreateResponseSchema, IncidentUpdateResponseSchema, IncidentDeleteResponseSchema,
+    IncidentSchema,
+    IncidentAssetSchema,
+    IncidentDetailSchema,
+    IncidentUpdateResponseSchema,
+    IncidentDeleteResponseSchema,
     ThreatIncidentAssociationSchema
 )
-from ..alerts.schemas import AlertListSchema
 
 router = Router(tags=["incidents"])
 
@@ -229,7 +230,6 @@ def create_incident(request, incident: IncidentSchema):
 
     return incident
 
-
 @router.get("/{incident_id}", response=IncidentDetailSchema)
 def get_incident(request, incident_id: int):
     """Get incident by ID with related alerts and user details"""
@@ -344,7 +344,6 @@ def get_incident(request, incident_id: int):
 
         return incident
 
-
 @router.put("/{incident_id}", response=IncidentUpdateResponseSchema)
 def update_incident(request, incident_id: int, incident_data: IncidentSchema):
 
@@ -447,7 +446,6 @@ def delete_incident(request, incident_id: int):
 
     return {"message": "Incident deleted successfully"}
 
-
 @router.get("/assets/{incident_id}", response=list[IncidentAssetSchema])
 def get_incident_assets(request, incident_id: int):
     assets = []
@@ -479,7 +477,6 @@ def get_incident_assets(request, incident_id: int):
             })
 
     return assets
-
 
 @router.post("/assets/", response=IncidentAssetSchema)
 def add_asset_to_incident(request, incident_asset_data: IncidentAssetSchema):
@@ -521,7 +518,6 @@ def add_asset_to_incident(request, incident_asset_data: IncidentAssetSchema):
         )
 
     return incident_asset_data
-
 
 @router.put("/assets/", response=IncidentAssetSchema)
 def update_incident_asset(request, incident_asset_data: IncidentAssetSchema,
@@ -590,7 +586,6 @@ def update_incident_asset(request, incident_asset_data: IncidentAssetSchema,
             )
 
     return incident_asset_data
-
 
 @router.delete("/assets/{incident_id}/{asset_id}")
 def remove_asset_from_incident(request, incident_id: int, asset_id: int):
@@ -685,15 +680,13 @@ def add_threat_to_incident(request, threat_incident_data: ThreatIncidentAssociat
 
 
         # Create new association
-        notes = threat_incident_data.get("notes", "")
+        notes = threat_incident_data.notes or ""
         cursor.execute(
             "INSERT INTO threat_incident_association (threat_id, incident_id, notes) VALUES (%s, %s, %s)",
             [threat_incident_data.threat_id, threat_incident_data.incident_id, notes]
         )
 
     return threat_incident_data
-
-
 
 @router.put("/threats/", response=ThreatIncidentAssociationSchema)
 def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociationSchema,
@@ -715,7 +708,7 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
 
             # Verify that the new threat and incident exist
             cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
-                          [threat_incident_data.incident_id])
+                           [threat_incident_data.incident_id])
             if not cursor.fetchone():
                 return HttpResponse(
                     status=400,
@@ -723,26 +716,45 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
                 )
 
             cursor.execute("SELECT threat_id FROM api_threatintelligence WHERE threat_id = %s",
-                          [threat_incident_data.threat_id])
+                           [threat_incident_data.threat_id])
             if not cursor.fetchone():
                 return HttpResponse(
                     status=400,
                     content=json.dumps({"detail": "Referenced threat not found"})
                 )
 
-            # Update the association (either same pair with new notes or completely new pair)
-            cursor.execute(
-                """DELETE FROM threat_incident_association 
-                   WHERE threat_id = %s AND incident_id = %s""",
-                [original_threat_id, original_incident_id]
-            )
+            # Check if the new association would create a duplicate
+            if (original_threat_id != threat_incident_data.threat_id or
+                    original_incident_id != threat_incident_data.incident_id):
+                cursor.execute(
+                    "SELECT threat_id FROM threat_incident_association WHERE threat_id = %s AND incident_id = %s",
+                    [threat_incident_data.threat_id, threat_incident_data.incident_id]
+                )
+                if cursor.fetchone():
+                    return HttpResponse(
+                        status=400,
+                        content=json.dumps({"detail": "This threat is already associated with this incident"})
+                    )
 
-            cursor.execute(
-                """INSERT INTO threat_incident_association (threat_id, incident_id, notes)
-                   VALUES (%s, %s, %s)""",
-                [threat_incident_data.threat_id, threat_incident_data.incident_id,
-                 threat_incident_data.notes]
-            )
+                # Update the association with new threat/incident pair
+                cursor.execute(
+                    """DELETE FROM threat_incident_association 
+                       WHERE threat_id = %s AND incident_id = %s""",
+                    [original_threat_id, original_incident_id]
+                )
+
+                cursor.execute(
+                    """INSERT INTO threat_incident_association (threat_id, incident_id, notes)
+                       VALUES (%s, %s, %s)""",
+                    [threat_incident_data.threat_id, threat_incident_data.incident_id,
+                     threat_incident_data.notes]
+                )
+            else:
+                # Just update notes for the same threat/incident pair
+                cursor.execute(
+                    "UPDATE threat_incident_association SET notes = %s WHERE threat_id = %s AND incident_id = %s",
+                    [threat_incident_data.notes, original_threat_id, original_incident_id]
+                )
         else:
             # Just update notes for existing association
             cursor.execute(
@@ -762,7 +774,6 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
             )
 
     return threat_incident_data
-
 
 @router.delete("/threats/{incident_id}/{threat_id}")
 def remove_threat_from_incident(request, incident_id: int, threat_id: int):

@@ -3,7 +3,7 @@ from django.db import connection, transaction
 
 from ninja import Router
 
-from app.api.common.schemas import ErrorSchema, SuccessSchema
+from app.api.schemas import ErrorSchema, SuccessSchema
 from app.api.incidents.schemas import ThreatIncidentAssociationSchema
 from app.api.threat_intelligence.schemas import (
     ThreatIntelligenceSchema,
@@ -12,7 +12,7 @@ from app.api.threat_intelligence.schemas import (
     ThreatIntelligenceUpdateResponseSchema,
     ThreatIntelligenceDeleteResponseSchema,
     ThreatAssetAssociationSchema,
-    ThreatVulnerabilityAssociationSchema
+    ThreatVulnerabilityAssociationSchema, ThreatIntelligenceListResponseSchema
 )
 
 router = Router(tags=["threat_intelligence"])
@@ -24,15 +24,35 @@ def dictfetchall(cursor):
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
-@router.get("/", response=ThreatIntelligenceListSchema)
+@router.get("/", response=ThreatIntelligenceListResponseSchema)
 def list_threats(request):
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT threat_id, threat_actor_name, indicator_type, indicator_value,
-                   confidence_level, description, related_cve
-            FROM api_threatintelligence
-            ORDER BY threat_id
-        """)
+        @router.get("/", response=ThreatIntelligenceListResponseSchema)
+        def list_threats(request):
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        t.threat_id, t.threat_actor_name, t.indicator_type, t.indicator_value,
+                        t.confidence_level, t.description, t.related_cve, t.date_identified, t.last_updated,
+                        ARRAY_AGG(DISTINCT a.asset_id) FILTER (WHERE a.asset_id IS NOT NULL) as asset_ids,
+                        ARRAY_AGG(DISTINCT v.vulnerability_id) FILTER (WHERE v.vulnerability_id IS NOT NULL) as vulnerability_ids,
+                        ARRAY_AGG(DISTINCT i.incident_id) FILTER (WHERE i.incident_id IS NOT NULL) as incident_ids
+                    FROM api_threatintelligence t
+                    LEFT JOIN threat_asset_association taa ON t.threat_id = taa.threat_id
+                    LEFT JOIN asset a ON taa.asset_id = a.asset_id
+                    LEFT JOIN threat_vulnerability_association tva ON t.threat_id = tva.threat_id
+                    LEFT JOIN vulnerability v ON tva.vulnerability_id = v.vulnerability_id
+                    LEFT JOIN incident_threat_association ita ON t.threat_id = ita.threat_id
+                    LEFT JOIN incident i ON ita.incident_id = i.incident_id
+                    GROUP BY t.threat_id
+                    ORDER BY t.threat_id
+                """)
+                threats = dictfetchall(cursor)
+
+            return {
+                "threats": threats,
+                "count": len(threats)
+            }
         threats = dictfetchall(cursor)
 
     return {
@@ -40,14 +60,16 @@ def list_threats(request):
         "count": len(threats)
     }
 
+
 @router.post("/", response={201: ThreatIntelligenceCreateResponseSchema, 400: ErrorSchema})
 def create_threat(request, payload: ThreatIntelligenceSchema):
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO api_threatintelligence
-                (threat_actor_name, indicator_type, indicator_value, confidence_level, description, related_cve)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                (threat_actor_name, indicator_type, indicator_value, confidence_level, 
+                 description, related_cve, date_identified, last_updated)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
                 RETURNING threat_id
             """, [
                 payload.threat_actor_name,
@@ -68,7 +90,7 @@ def get_threat(request, threat_id: int):
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT threat_id, threat_actor_name, indicator_type, indicator_value,
-                   confidence_level, description, related_cve
+                   confidence_level, description, related_cve, date_identified, last_updated
             FROM api_threatintelligence
             WHERE threat_id = %s
         """, [threat_id])
@@ -84,7 +106,9 @@ def get_threat(request, threat_id: int):
         "indicator_value": threat[3],
         "confidence_level": threat[4],
         "description": threat[5],
-        "related_cve": threat[6]
+        "related_cve": threat[6],
+        "date_identified": threat[7],
+        "last_updated": threat[8]
     }
 
 @router.put("/{threat_id}", response={200: ThreatIntelligenceUpdateResponseSchema, 404: ErrorSchema, 400: ErrorSchema})
@@ -103,7 +127,8 @@ def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
                     indicator_value = %s,
                     confidence_level = %s,
                     description = %s,
-                    related_cve = %s
+                    related_cve = %s,
+                    last_updated = NOW()
                 WHERE threat_id = %s
             """, [
                 payload.threat_actor_name,
@@ -179,32 +204,6 @@ def create_threat_vulnerability_association(request, payload: ThreatVulnerabilit
                     INSERT INTO threat_vulnerability_association (threat_id, vulnerability_id)
                     VALUES (%s, %s)
                 """, [payload.threat_id, payload.vulnerability_id])
-
-        return 201, {"message": "Association created successfully"}
-    except Exception as e:
-        return 400, {"message": str(e)}
-
-
-@router.post("/incident-association", response={201: SuccessSchema, 400: ErrorSchema, 404: ErrorSchema})
-def create_threat_incident_association(request, payload: ThreatIncidentAssociationSchema):
-    try:
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                # Check if threat exists
-                cursor.execute("SELECT 1 FROM api_threatintelligence WHERE threat_id = %s", [payload.threat_id])
-                if not cursor.fetchone():
-                    return 404, {"message": "Threat intelligence not found"}
-
-                # Check if incident exists
-                cursor.execute("SELECT 1 FROM incident WHERE incident_id = %s", [payload.incident_id])
-                if not cursor.fetchone():
-                    return 404, {"message": "Incident not found"}
-
-                # Create association
-                cursor.execute("""
-                    INSERT INTO threat_incident_association (threat_id, incident_id, notes)
-                    VALUES (%s, %s, %s)
-                """, [payload.threat_id, payload.incident_id, payload.notes])
 
         return 201, {"message": "Association created successfully"}
     except Exception as e:
