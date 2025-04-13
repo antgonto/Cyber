@@ -1,3 +1,6 @@
+from datetime import timezone, datetime
+
+from django.contrib.auth.hashers import make_password
 from ninja import Router
 from django.db import connection
 from django.http import HttpResponse
@@ -26,11 +29,9 @@ def list_users(request):
             users.append(user)
         return users
 
+
 @router.post("/", response=UserSchema)
 def create_user(request, user_data: UserCreateSchema):
-    """Create a new user"""
-    from django.contrib.auth.hashers import make_password
-
     with connection.cursor() as cursor:
         # Check if username or email already exists
         cursor.execute(
@@ -44,28 +45,39 @@ def create_user(request, user_data: UserCreateSchema):
             )
 
         # Insert new user
-        hashed_password = make_password(user_data.password)
+        password_hash = make_password(user_data.password)
+        now = datetime.now(timezone.utc)
 
         cursor.execute(
             """
-            INSERT INTO api_user (username, email, role, password, last_login, date_joined)
-            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            RETURNING user_id, username, email, role, last_login, is_active, date_joined
+            INSERT INTO api_user (username, email, role, password, is_active, date_joined, last_login)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING user_id, username, email, role, is_active, date_joined, last_login
             """,
-            [user_data.username, user_data.email, user_data.role, hashed_password]
+            [
+                user_data.username,
+                user_data.email,
+                user_data.role,
+                password_hash,
+                True if user_data.is_active is None else user_data.is_active,
+                now,
+                now
+            ]
         )
 
         row = cursor.fetchone()
+        print("user_id", row[0])
         user = {
             "user_id": row[0],
             "username": row[1],
             "email": row[2],
             "role": row[3],
-            "last_login": row[4],
-            "is_active": row[5],
+            "is_active": row[4],
+            "last_login": row[5],
             "date_joined": row[6],
         }
         return user
+
 
 @router.get("/{user_id}", response=UserSchema)
 def get_user(request, user_id: int):
@@ -93,9 +105,6 @@ def get_user(request, user_id: int):
 
 @router.put("/{user_id}", response=UserSchema)
 def update_user(request, user_id: int, user_data: UserUpdateSchema):
-    """Update an existing user"""
-    from django.contrib.auth.hashers import make_password
-
     with connection.cursor() as cursor:
         # Check if user exists
         cursor.execute("SELECT user_id FROM api_user WHERE user_id = %s", [user_id])
@@ -122,6 +131,10 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
             update_fields.append("role = %s")
             params.append(user_data.role)
 
+        if user_data.is_active:
+            update_fields.append("is_active = %s")
+            params.append(user_data.is_active)
+
         if not update_fields:
             # If no fields to update, just return the current user
             cursor.execute(
@@ -134,13 +147,13 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
                 "username": row[1],
                 "email": row[2],
                 "role": row[3],
-                "last_login": row[4],
-                "is_active": row[5],
+                "is_active": row[4],
+                "last_login": row[5],
                 "date_joined": row[6],
             }
             return user
 
-        # Add user_id to params for WHERE clause
+        # Add asset_id to params for WHERE clause
         params.append(user_id)
 
         # Execute update query
@@ -180,6 +193,7 @@ def delete_user(request, user_id: int):
         cursor.execute("DELETE FROM api_user WHERE user_id = %s", [user_id])
         return {"success": True}
 
+
 @router.post("/activity/log", response=dict)
 def log_user_activity(request, activity: dict):
     """Log user activity"""
@@ -191,8 +205,9 @@ def log_user_activity(request, activity: dict):
             VALUES (%s, %s, %s, %s)
             """,
             [
-                request.user.id, activity["action"],
-                activity["entity_type"], activity["entity_id"],
+                request.user.id,
+                activity["action"],
+                datetime.now(timezone.utc),
                 json.dumps(activity["details"])
             ]
         )

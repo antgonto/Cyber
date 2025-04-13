@@ -30,7 +30,7 @@ def list_threats(request):
         cursor.execute("""
             SELECT threat_id, threat_actor_name, indicator_type, indicator_value,
                    confidence_level, description, related_cve
-            FROM threat_intelligence
+            FROM api_threatintelligence
             ORDER BY threat_id
         """)
         threats = dictfetchall(cursor)
@@ -45,7 +45,7 @@ def create_threat(request, payload: ThreatIntelligenceSchema):
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO threat_intelligence
+                INSERT INTO api_threatintelligence
                 (threat_actor_name, indicator_type, indicator_value, confidence_level, description, related_cve)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING threat_id
@@ -69,7 +69,7 @@ def get_threat(request, threat_id: int):
         cursor.execute("""
             SELECT threat_id, threat_actor_name, indicator_type, indicator_value,
                    confidence_level, description, related_cve
-            FROM threat_intelligence
+            FROM api_threatintelligence
             WHERE threat_id = %s
         """, [threat_id])
         threat = cursor.fetchone()
@@ -92,12 +92,12 @@ def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
     try:
         with connection.cursor() as cursor:
             # Check if threat exists
-            cursor.execute("SELECT 1 FROM threat_intelligence WHERE threat_id = %s", [threat_id])
+            cursor.execute("SELECT 1 FROM api_threatintelligence WHERE threat_id = %s", [threat_id])
             if not cursor.fetchone():
                 return 404, {"message": "Threat intelligence not found"}
 
             cursor.execute("""
-                UPDATE threat_intelligence
+                UPDATE api_threatintelligence
                 SET threat_actor_name = %s,
                     indicator_type = %s,
                     indicator_value = %s,
@@ -124,11 +124,11 @@ def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
 def delete_threat(request, threat_id: int):
     with connection.cursor() as cursor:
         # Check if threat exists
-        cursor.execute("SELECT 1 FROM threat_intelligence WHERE threat_id = %s", [threat_id])
+        cursor.execute("SELECT 1 FROM api_threatintelligence WHERE threat_id = %s", [threat_id])
         if not cursor.fetchone():
             return 404, {"message": "Threat intelligence not found"}
 
-        cursor.execute("DELETE FROM threat_intelligence WHERE threat_id = %s", [threat_id])
+        cursor.execute("DELETE FROM api_threatintelligence WHERE threat_id = %s", [threat_id])
 
     return 200, {}
 
@@ -139,7 +139,7 @@ def create_threat_asset_association(request, payload: ThreatAssetAssociationSche
         with transaction.atomic():
             with connection.cursor() as cursor:
                 # Check if threat exists
-                cursor.execute("SELECT 1 FROM threat_intelligence WHERE threat_id = %s", [payload.threat_id])
+                cursor.execute("SELECT 1 FROM api_threatintelligence WHERE threat_id = %s", [payload.threat_id])
                 if not cursor.fetchone():
                     return 404, {"message": "Threat intelligence not found"}
 
@@ -165,7 +165,7 @@ def create_threat_vulnerability_association(request, payload: ThreatVulnerabilit
         with transaction.atomic():
             with connection.cursor() as cursor:
                 # Check if threat exists
-                cursor.execute("SELECT 1 FROM threat_intelligence WHERE threat_id = %s", [payload.threat_id])
+                cursor.execute("SELECT 1 FROM api_threatintelligence WHERE threat_id = %s", [payload.threat_id])
                 if not cursor.fetchone():
                     return 404, {"message": "Threat intelligence not found"}
 
@@ -191,7 +191,7 @@ def create_threat_incident_association(request, payload: ThreatIncidentAssociati
         with transaction.atomic():
             with connection.cursor() as cursor:
                 # Check if threat exists
-                cursor.execute("SELECT 1 FROM threat_intelligence WHERE threat_id = %s", [payload.threat_id])
+                cursor.execute("SELECT 1 FROM api_threatintelligence WHERE threat_id = %s", [payload.threat_id])
                 if not cursor.fetchone():
                     return 404, {"message": "Threat intelligence not found"}
 

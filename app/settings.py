@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "app.api.apps.APIConfig",
     "corsheaders",
+    'app',
+    'app.api.alerts',
 ]
 
 MIDDLEWARE = [

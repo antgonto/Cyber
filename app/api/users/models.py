@@ -14,8 +14,8 @@ class User(models.Model):
     email = models.EmailField(max_length=255, unique=True)
     role = models.CharField(max_length=50, choices=RoleChoices.choices, default=RoleChoices.USER)
     password = models.CharField(max_length=255)
-    last_login = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    last_login = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):

@@ -13,7 +13,7 @@ router = Router(tags=["vulnerabilities"])
 def list_vulnerabilities(request):
     """Get all vulnerabilities"""
     with connection.cursor() as cursor:
-        cursor.execute("SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability")
+        cursor.execute("SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available FROM api_vulnerability")
         vulnerabilities = []
         for row in cursor.fetchall():
             vulnerability = {
@@ -23,6 +23,8 @@ def list_vulnerabilities(request):
                 "severity": row[3],
                 "cve_reference": row[4],
                 "remediation_steps": row[5],
+                "discovery_date": row[6],
+                "patch_available": row[7],
             }
             vulnerabilities.append(vulnerability)
         return vulnerabilities
@@ -45,11 +47,11 @@ def create_vulnerability(request, vulnerability_data: VulnerabilityCreateSchema)
         # Insert new vulnerability
         cursor.execute(
             """
-            INSERT INTO api_vulnerability (title, description, severity, cve_reference, remediation_steps)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING vulnerability_id, title, description, severity, cve_reference, remediation_steps
+            INSERT INTO api_vulnerability (title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING vulnerability_id, title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available
             """,
-            [vulnerability_data.title, vulnerability_data.description, vulnerability_data.severity, vulnerability_data.cve_reference, vulnerability_data.remediation_steps]
+            [vulnerability_data.title, vulnerability_data.description, vulnerability_data.severity, vulnerability_data.cve_reference, vulnerability_data.remediation_steps, vulnerability_data.discovery_date, vulnerability_data.patch_available]
         )
 
         row = cursor.fetchone()
@@ -60,6 +62,8 @@ def create_vulnerability(request, vulnerability_data: VulnerabilityCreateSchema)
             "severity": row[3],
             "cve_reference": row[4],
             "remediation_steps": row[5],
+            "discovery_date": row[6],
+            "patch_available": row[7],
         }
         return vulnerability
 
@@ -68,7 +72,7 @@ def get_vulnerability(request, vulnerability_id: int):
     """Get vulnerability by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
+            "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available FROM api_vulnerability WHERE vulnerability_id = %s",
             [vulnerability_id]
         )
         row = cursor.fetchone()
@@ -82,6 +86,8 @@ def get_vulnerability(request, vulnerability_id: int):
             "severity": row[3],
             "cve_reference": row[4],
             "remediation_steps": row[5],
+            "discovery_date": row[6],
+            "patch_available": row[7],
         }
         return vulnerability
 
@@ -97,10 +103,6 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
         # Build update query dynamically based on provided fields
         update_fields = []
         params = []
-
-        if vulnerability_data.title:
-            update_fields.append("title = %s")
-            params.append(vulnerability_data.title)
 
         if vulnerability_data.description:
             update_fields.append("description = %s")
@@ -118,10 +120,18 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
             update_fields.append("remediation_steps = %s")
             params.append(vulnerability_data.remediation_steps)
 
+        if vulnerability_data.discovery_date:
+            update_fields.append("discovery_date = %s")
+            params.append(vulnerability_data.discovery_date)
+
+        if vulnerability_data.patch_available:
+            update_fields.append("patch_available = %s")
+            params.append(vulnerability_data.patch_available)
+
         if not update_fields:
             # If no fields to update, just return the current vulnerability
             cursor.execute(
-                "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps FROM api_vulnerability WHERE vulnerability_id = %s",
+                "SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available FROM api_vulnerability WHERE vulnerability_id = %s",
                 [vulnerability_id]
             )
             row = cursor.fetchone()
@@ -132,6 +142,8 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
                 "severity": row[3],
                 "cve_reference": row[4],
                 "remediation_steps": row[5],
+                "discovery_date": row[6],
+                "patch_available": row[7],
             }
             return vulnerability
 
@@ -144,7 +156,7 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
             UPDATE api_vulnerability
             SET {", ".join(update_fields)}
             WHERE vulnerability_id = %s
-            RETURNING vulnerability_id, title, description, severity, cve_reference, remediation_steps
+            RETURNING vulnerability_id, title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available
             """,
             params
         )
@@ -157,9 +169,10 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
             "severity": row[3],
             "cve_reference": row[4],
             "remediation_steps": row[5],
+            "discovery_date": row[6],
+            "patch_available": row[7],
         }
         return vulnerability
-
 
 @router.delete("/{vulnerability_id}")
 def delete_vulnerability(request, vulnerability_id: int):

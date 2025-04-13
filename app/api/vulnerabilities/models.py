@@ -3,7 +3,7 @@ from django.db import models
 
 class Vulnerability(models.Model):
     vulnerability_id = models.AutoField(primary_key=True)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, unique=True)
     description = models.TextField()
     severity = models.CharField(max_length=50)
     cve_reference = models.CharField(max_length=100)

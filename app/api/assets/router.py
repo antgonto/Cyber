@@ -46,7 +46,7 @@ def create_asset(request, asset_data: AssetCreateSchema):
         cursor.execute(
             """
             INSERT INTO api_asset (asset_name, asset_type, location, owner, criticality_level)
-            VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING asset_id, asset_name, asset_type, location, owner, criticality_level
             """,
             [asset_data.asset_name, asset_data.asset_type, asset_data.location, asset_data.owner, asset_data.criticality_level]
@@ -109,7 +109,7 @@ def update_asset(request, asset_id: int, asset_data: AssetUpdateSchema):
 
         if asset_data.asset_type:
             update_fields.append("asset_type = %s")
-            params.append(asset_data.asset_name)
+            params.append(asset_data.asset_type)
 
         if asset_data.location:
             update_fields.append("location = %s")
