@@ -14,9 +14,9 @@ from .schemas import (
     IncidentDeleteResponseSchema,
     ThreatIncidentAssociationSchema
 )
+from ..schemas import ErrorSchema
 
 router = Router(tags=["incidents"])
-
 
 @router.get("/", response=list[IncidentDetailSchema])
 def list_detailed_incidents(
@@ -29,17 +29,11 @@ def list_detailed_incidents(
     """List all incidents with detailed information and optional filtering"""
     results = []
 
-    # First get the filtered incident IDs
     with connection.cursor() as cursor:
-        query = """
-            SELECT i.incident_id
-            FROM api_incident i
-            LEFT JOIN api_user u ON i.assigned_to_id = u.user_id
-        """
-        params = []
-
         # Build WHERE clause for filters
         where_clauses = []
+        params = []
+
         if status:
             where_clauses.append("i.status = %s")
             params.append(status)
@@ -53,31 +47,25 @@ def list_detailed_incidents(
             where_clauses.append("i.assigned_to_id = %s")
             params.append(assigned_to_id)
 
-        if where_clauses:
-            query += " WHERE " + " AND ".join(where_clauses)
+        where_clause = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
-        # Add ordering by most recent first
-        query += " ORDER BY i.reported_date DESC"
+        # Get basic incident information
+        cursor.execute(
+            f"""
+            SELECT i.incident_id, i.incident_type, i.description, i.severity, i.status,
+                   i.reported_date, i.resolved_date, i.assigned_to_id, u.username
+            FROM api_incident i
+            LEFT JOIN api_user u ON i.assigned_to_id = u.user_id
+            {where_clause}
+            ORDER BY i.reported_date DESC
+            """,
+            params
+        )
 
-        cursor.execute(query, params)
-        incident_ids = [row[0] for row in cursor.fetchall()]
+        incidents = cursor.fetchall()
 
-    # Now get detailed information for each incident
-    for incident_id in incident_ids:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT i.incident_id, i.incident_type, i.description, i.severity, i.status,
-                       i.reported_date, i.resolved_date, i.assigned_to_id, u.username
-                FROM api_incident i
-                LEFT JOIN api_user u ON i.assigned_to_id = u.user_id
-                WHERE i.incident_id = %s
-                """,
-                [incident_id]
-            )
-            row = cursor.fetchone()
-            if not row:
-                continue
+        for inc in incidents:
+            incident_id = inc[0]
 
             # Get related alerts
             cursor.execute(
@@ -88,8 +76,6 @@ def list_detailed_incidents(
                 """,
                 [incident_id]
             )
-            alert_rows = cursor.fetchall()
-
             alerts = [
                 {
                     "alert_id": row[0],
@@ -99,13 +85,12 @@ def list_detailed_incidents(
                     "alert_time": row[4],
                     "severity": row[5],
                     "status": row[6] if row[6] in ['new', 'acknowledged', 'resolved', 'closed'] else 'new',
-                    # Map invalid status to valid status
                     "incident_id": incident_id
                 }
-                for row in alert_rows
+                for row in cursor.fetchall()
             ]
 
-            # Get related threat intelligence
+            # Get related threats
             cursor.execute(
                 """
                 SELECT ti.threat_id, ti.threat_actor_name, ti.indicator_type,
@@ -116,8 +101,6 @@ def list_detailed_incidents(
                 """,
                 [incident_id]
             )
-            threat_rows = cursor.fetchall()
-
             threats = [
                 {
                     "threat_id": row[0],
@@ -128,21 +111,19 @@ def list_detailed_incidents(
                     "description": row[5],
                     "related_cve": row[6]
                 }
-                for row in threat_rows
+                for row in cursor.fetchall()
             ]
 
             # Get related assets
             cursor.execute(
                 """
-                SELECT a.asset_id, a.asset_name, a.asset_type, a.location, a.owner, a.criticality_level, ia.impact_level
+                SELECT a.asset_id, a.asset_name, a.asset_type, a.location, a.owner, a.criticality_level
                 FROM api_asset a
                 JOIN incident_assets ia ON a.asset_id = ia.asset_id
                 WHERE ia.incident_id = %s
                 """,
                 [incident_id]
             )
-            asset_rows = cursor.fetchall()
-
             assets = [
                 {
                     "asset_id": row[0],
@@ -152,19 +133,20 @@ def list_detailed_incidents(
                     "owner": row[4],
                     "criticality_level": row[5]
                 }
-                for row in asset_rows
+                for row in cursor.fetchall()
             ]
 
+            # Combine all data into a single incident record
             incident = {
-                "incident_id": row[0],
-                "incident_type": row[1],
-                "description": row[2],
-                "severity": row[3],
-                "status": row[4],
-                "reported_date": row[5],
-                "resolved_date": row[6],
-                "assigned_to_id": row[7],
-                "assigned_to_username": row[8] if row[7] else None,
+                "incident_id": inc[0],
+                "incident_type": inc[1],
+                "description": inc[2],
+                "severity": inc[3],
+                "status": inc[4],
+                "reported_date": inc[5],
+                "resolved_date": inc[6],
+                "assigned_to_id": inc[7],
+                "assigned_to_username": inc[8] if inc[7] else None,
                 "alerts": alerts,
                 "threats": threats,
                 "assets": assets
@@ -173,7 +155,6 @@ def list_detailed_incidents(
             results.append(incident)
 
     return results
-
 @router.post("/", response=IncidentSchema)
 def create_incident(request, incident: IncidentSchema):
     """Create a new incident"""
@@ -425,12 +406,10 @@ def update_incident(request, incident_id: int, incident_data: IncidentSchema):
 
     return {"message": "Incident updated successfully"}
 
+
 @router.delete("/{incident_id}", response=IncidentDeleteResponseSchema)
 def delete_incident(request, incident_id: int):
     """Delete an incident"""
-    from django.db import connection
-    from django.http import Http404
-
     # Check if incident exists and delete it
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s", [incident_id])
@@ -441,13 +420,20 @@ def delete_incident(request, incident_id: int):
                 content=json.dumps({"detail": "Incident not found"})
             )
 
+        # Delete related associations first to maintain referential integrity
+        cursor.execute("DELETE FROM incident_assets WHERE incident_id = %s", [incident_id])
+        cursor.execute("DELETE FROM threat_incident_association WHERE incident_id = %s", [incident_id])
+        cursor.execute("UPDATE api_alert SET incident_id = NULL WHERE incident_id = %s", [incident_id])
 
+        # Now delete the incident
         cursor.execute("DELETE FROM api_incident WHERE incident_id = %s", [incident_id])
 
     return {"message": "Incident deleted successfully"}
 
-@router.get("/assets/{incident_id}", response=list[IncidentAssetSchema])
-def get_incident_assets(request, incident_id: int):
+
+@router.get("/assets/{incident_id}", response={200: list[IncidentAssetSchema], 400: ErrorSchema})
+def get_assets_from_incident(request, incident_id: int):
+
     assets = []
 
     # Verify incident exists
@@ -462,9 +448,9 @@ def get_incident_assets(request, incident_id: int):
         # Get all assets for the incident
         cursor.execute(
             """
-            SELECT ia.incident_id, ia.asset_id, ia.impact_level 
-            FROM incident_assets ia 
-            WHERE ia.incident_id = %s
+            SELECT incident_id, asset_id, impact_level 
+            FROM incident_assets  
+            WHERE incident_id = %s
             """,
             [incident_id]
         )
@@ -478,10 +464,23 @@ def get_incident_assets(request, incident_id: int):
 
     return assets
 
-@router.post("/assets/", response=IncidentAssetSchema)
+@router.post("/assets/", response={201: IncidentAssetSchema, 400: ErrorSchema})
 def add_asset_to_incident(request, incident_asset_data: IncidentAssetSchema):
     # Verify incident exists
     with connection.cursor() as cursor:
+        # Check if association already exists
+        cursor.execute(
+            "SELECT incident_id FROM incident_assets WHERE incident_id = %s AND asset_id = %s",
+            [incident_asset_data.incident_id, incident_asset_data.asset_id]
+        )
+
+        if cursor.fetchone():
+            return HttpResponse(
+                status=400,
+                content=json.dumps({"detail": "Asset already associated with this incident"})
+            )
+
+        # Validate that the incident and asset exist
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
                        [incident_asset_data.incident_id])
         if not cursor.fetchone():
@@ -499,68 +498,60 @@ def add_asset_to_incident(request, incident_asset_data: IncidentAssetSchema):
                 content=json.dumps({"detail": "Referenced asset not found"})
             )
 
-        # Check if association already exists
-        cursor.execute(
-            "SELECT incident_id FROM incident_assets WHERE incident_id = %s AND asset_id = %s",
-            [incident_asset_data.incident_id, incident_asset_data.asset_id]
-        )
-
-        if cursor.fetchone():
-            return HttpResponse(
-                status=400,
-                content=json.dumps({"detail": "Asset already associated with this incident"})
-            )
-
         # Create new association
-        cursor.execute(
-            "INSERT INTO incident_assets (incident_id, asset_id, impact_level) VALUES (%s, %s, %s)",
-            [incident_asset_data.incident_id, incident_asset_data.asset_id, incident_asset_data.impact_level]
+        cursor.execute("""
+            INSERT INTO incident_assets (incident_id, asset_id, impact_level) VALUES (%s, %s, %s)
+            RETURNING id, incident_id, asset_id, impact_level
+            """,
+        [incident_asset_data.incident_id, incident_asset_data.asset_id, incident_asset_data.impact_level]
         )
 
     return incident_asset_data
 
-@router.put("/assets/", response=IncidentAssetSchema)
-def update_incident_asset(request, incident_asset_data: IncidentAssetSchema,
+@router.put("/assets/", response={200: IncidentAssetSchema, 404: ErrorSchema, 400: ErrorSchema})
+def update_asset_in_incident(request, incident_asset_data: IncidentAssetSchema,
                           original_incident_id: Optional[int] = None,
                           original_asset_id: Optional[int] = None):
+
     with connection.cursor() as cursor:
-        # Check if we're updating an existing association
-        if original_incident_id and original_asset_id:
-            # Verify the original association exists
-            cursor.execute(
-                "SELECT incident_id FROM incident_assets WHERE incident_id = %s AND asset_id = %s",
-                [original_incident_id, original_asset_id]
+        # Verify the original association exists
+        cursor.execute(
+            "SELECT incident_id FROM incident_assets WHERE incident_id = %s AND asset_id = %s",
+            [original_incident_id, original_asset_id]
+        )
+
+        if not cursor.fetchone():
+            return HttpResponse(
+                status=404,
+                content=json.dumps({"detail": "Original asset association not found"})
             )
-            if not cursor.fetchone():
-                return HttpResponse(
-                    status=404,
-                    content=json.dumps({"detail": "Original asset association not found"})
-                )
 
-            # Verify that the new incident and asset exist
-            cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
-                           [incident_asset_data.incident_id])
-            if not cursor.fetchone():
-                return HttpResponse(
-                    status=400,
-                    content=json.dumps({"detail": "Referenced incident not found"})
-                )
+        # Verify that the incident and asset exist
+        cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
+                       [incident_asset_data.incident_id])
 
-            cursor.execute("SELECT asset_id FROM api_asset WHERE asset_id = %s",
-                           [incident_asset_data.asset_id])
-            if not cursor.fetchone():
-                return HttpResponse(
-                    status=400,
-                    content=json.dumps({"detail": "Referenced asset not found"})
-                )
+        if not cursor.fetchone():
+            return HttpResponse(
+                status=400,
+                content=json.dumps({"detail": "Referenced incident not found"})
+            )
 
+        cursor.execute("SELECT asset_id FROM api_asset WHERE asset_id = %s",
+                       [incident_asset_data.asset_id])
+        if not cursor.fetchone():
+            return HttpResponse(
+                status=400,
+                content=json.dumps({"detail": "Referenced asset not found"})
+            )
+
+        # Check if we're updating an existing association
+        if ((original_incident_id != incident_asset_data.incident_id) or (original_asset_id != incident_asset_data.asset_id)):
             # Update the association (either same pair with new impact_level or completely new pair)
             cursor.execute(
-                """DELETE FROM incident_assets 
-                   WHERE incident_id = %s AND asset_id = %s""",
+                """DELETE FROM incident_assets WHERE incident_id = %s AND asset_id = %s""",
                 [original_incident_id, original_asset_id]
             )
-
+            # Update the association (either same pair with new data or a completely new pair)
             cursor.execute(
                 """INSERT INTO incident_assets (incident_id, asset_id, impact_level) 
                    VALUES (%s, %s, %s)""",
@@ -587,7 +578,7 @@ def update_incident_asset(request, incident_asset_data: IncidentAssetSchema,
 
     return incident_asset_data
 
-@router.delete("/assets/{incident_id}/{asset_id}")
+@router.delete("/assets/{incident_id}/{asset_id}", response={200: dict, 404: ErrorSchema})
 def remove_asset_from_incident(request, incident_id: int, asset_id: int):
     # Check if association exists
     with connection.cursor() as cursor:
@@ -610,11 +601,9 @@ def remove_asset_from_incident(request, incident_id: int, asset_id: int):
     return {"success": True}
 
 @router.get("/threats/{incident_id}", response=list[ThreatIncidentAssociationSchema])
-def get_incident_threats(request, incident_id: int):
+def get_threats_by_incident(request, incident_id: int):
     """Get all threat associations for an incident"""
     associations = []
-
-    # Verify incident exists
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s", [incident_id])
         if not cursor.fetchone():
@@ -624,12 +613,7 @@ def get_incident_threats(request, incident_id: int):
             )
 
         # Get associations
-        cursor.execute(
-            """
-            SELECT tia.threat_id, tia.incident_id, tia.notes
-            FROM threat_incident_association tia
-            WHERE tia.incident_id = %s
-            """,
+        cursor.execute("SELECT threat_id, incident_id, notes FROM threat_incident_association WHERE incident_id = %s",
             [incident_id]
         )
 
@@ -644,8 +628,6 @@ def get_incident_threats(request, incident_id: int):
 
 @router.post("/threats/", response=ThreatIncidentAssociationSchema)
 def add_threat_to_incident(request, threat_incident_data: ThreatIncidentAssociationSchema):
-
-    # Verify incident and threat exist
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
                       [threat_incident_data.incident_id])
@@ -665,7 +647,6 @@ def add_threat_to_incident(request, threat_incident_data: ThreatIncidentAssociat
                 content=json.dumps({"detail": "Threat not found"})
             )
 
-
         # Check if association already exists
         cursor.execute(
             "SELECT threat_id FROM threat_incident_association WHERE threat_id = %s AND incident_id = %s",
@@ -677,7 +658,6 @@ def add_threat_to_incident(request, threat_incident_data: ThreatIncidentAssociat
                 status=400,
                 content=json.dumps({"detail": "Threat already associated with this incident"})
             )
-
 
         # Create new association
         notes = threat_incident_data.notes or ""
@@ -695,17 +675,6 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
     with connection.cursor() as cursor:
         # Check if we're updating an existing association
         if original_threat_id and original_incident_id:
-            # Verify the original association exists
-            cursor.execute(
-                "SELECT threat_id FROM threat_incident_association WHERE threat_id = %s AND incident_id = %s",
-                [original_threat_id, original_incident_id]
-            )
-            if not cursor.fetchone():
-                return HttpResponse(
-                    status=404,
-                    content=json.dumps({"detail": "Original threat association not found"})
-                )
-
             # Verify that the new threat and incident exist
             cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
                            [threat_incident_data.incident_id])
@@ -721,6 +690,17 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
                 return HttpResponse(
                     status=400,
                     content=json.dumps({"detail": "Referenced threat not found"})
+                )
+
+            # Verify the original association exists
+            cursor.execute(
+                "SELECT threat_id FROM threat_incident_association WHERE threat_id = %s AND incident_id = %s",
+                [original_threat_id, original_incident_id]
+            )
+            if not cursor.fetchone():
+                return HttpResponse(
+                    status=404,
+                    content=json.dumps({"detail": "Original threat association not found"})
                 )
 
             # Check if the new association would create a duplicate
@@ -743,17 +723,18 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
                     [original_threat_id, original_incident_id]
                 )
 
+                notes = threat_incident_data.notes if hasattr(threat_incident_data, 'notes') else ""
                 cursor.execute(
                     """INSERT INTO threat_incident_association (threat_id, incident_id, notes)
                        VALUES (%s, %s, %s)""",
-                    [threat_incident_data.threat_id, threat_incident_data.incident_id,
-                     threat_incident_data.notes]
+                    [threat_incident_data.threat_id, threat_incident_data.incident_id, notes]
                 )
             else:
                 # Just update notes for the same threat/incident pair
+                notes = threat_incident_data.notes if hasattr(threat_incident_data, 'notes') else ""
                 cursor.execute(
                     "UPDATE threat_incident_association SET notes = %s WHERE threat_id = %s AND incident_id = %s",
-                    [threat_incident_data.notes, original_threat_id, original_incident_id]
+                    [notes, original_threat_id, original_incident_id]
                 )
         else:
             # Just update notes for existing association

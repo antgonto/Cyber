@@ -1,17 +1,22 @@
 from datetime import timezone, datetime
 
 from django.contrib.auth.hashers import make_password
+from django.shortcuts import get_object_or_404
 from ninja import Router
 from django.db import connection
 from django.http import HttpResponse
 from typing import List
 import json
-from .schemas import UserSchema, UserCreateSchema, UserUpdateSchema
+
+from .models import User, UserActivityLog
+from .schemas import UserSchema, UserCreateSchema, UserUpdateSchema, UserActivityLogFullSchema, \
+    UserActivityLogCreateSchema, UserActivityLogFilterSchema, UserActivityLogUpdateSchema
 
 router = Router(tags=["users"])
 
 @router.get("/", response=List[UserSchema])
 def list_users(request):
+    print("list_users")
     """Get all users"""
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user")
@@ -213,3 +218,194 @@ def log_user_activity(request, activity: dict):
         )
 
     return {"success": True, "message": "Activity logged"}
+
+
+@router.post("/activity-logs/", response=UserActivityLogFullSchema)
+def create_activity_log(request, payload: UserActivityLogCreateSchema):
+    with connection.cursor() as cursor:
+        # Check if user exists
+        cursor.execute("SELECT user_id FROM api_user WHERE user_id = %s", [payload.user_id])
+        if not cursor.fetchone():
+            return HttpResponse(status=404, content=json.dumps({"detail": "User not found"}))
+
+        now = datetime.now(timezone.utc)
+        cursor.execute(
+            """
+            INSERT INTO user_activity_logs 
+            (user_id, activity_type, timestamp, description)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, user_id, activity_type, timestamp, description
+            """,
+            [
+                payload.user_id,
+                payload.activity_type,
+                now,
+                payload.description,
+                payload.ip_address,
+                payload.resource_type,
+                payload.resource_id
+            ]
+        )
+
+        row = cursor.fetchone()
+        return {
+            "log_id": row[0],
+            "user_id": row[1],
+            "activity_type": row[2],
+            "timestamp": row[3],
+            "description": row[4],
+            "ip_address": row[5],
+            "resource_type": row[6],
+            "resource_id": row[7]
+        }
+
+
+@router.get("/activity-logs/", response=List[UserActivityLogFullSchema])
+def list_activity_logs(request, filters: UserActivityLogFilterSchema = None):
+    with connection.cursor() as cursor:
+        query = "SELECT id, user_id, activity_type, timestamp, description FROM user_activity_logs"
+        conditions = []
+        params = []
+
+        if filters:
+            if filters.user_id:
+                conditions.append("user_id = %s")
+                params.append(filters.user_id)
+            if filters.activity_type:
+                conditions.append("activity_type = %s")
+                params.append(filters.activity_type)
+            if filters.resource_type:
+                conditions.append("resource_type = %s")
+                params.append(filters.resource_type)
+            if filters.from_date:
+                from_date = datetime.strptime(filters.from_date, "%Y-%m-%d")
+                conditions.append("timestamp >= %s")
+                params.append(from_date)
+            if filters.to_date:
+                to_date = datetime.strptime(filters.to_date, "%Y-%m-%d")
+                conditions.append("timestamp <= %s")
+                params.append(to_date)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY timestamp DESC"
+
+        cursor.execute(query, params)
+
+        results = []
+        for row in cursor.fetchall():
+            results.append({
+                "log_id": row[0],
+                "user_id": row[1],
+                "activity_type": row[2],
+                "timestamp": row[3],
+                "description": row[4],
+                "ip_address": row[5],
+                "resource_type": row[6],
+                "resource_id": row[7]
+            })
+
+        return results
+
+
+@router.get("/activity-logs/{log_id}/", response=UserActivityLogFullSchema)
+def get_activity_log(request, log_id: int):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, user_id, activity_type, timestamp, description
+            FROM user_activity_logs WHERE id = %s
+            """,
+            [log_id]
+        )
+        row = cursor.fetchone()
+        if not row:
+            return HttpResponse(status=404, content=json.dumps({"detail": "Activity log not found"}))
+
+        return {
+            "log_id": row[0],
+            "user_id": row[1],
+            "activity_type": row[2],
+            "timestamp": row[3],
+            "description": row[4],
+            "ip_address": row[5],
+            "resource_type": row[6],
+            "resource_id": row[7]
+        }
+
+
+@router.put("/activity-logs/{log_id}/", response=UserActivityLogFullSchema)
+def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSchema):
+    with connection.cursor() as cursor:
+        # Check if activity log exists
+        cursor.execute("SELECT id FROM user_activity_logs WHERE id = %s", [log_id])
+        if not cursor.fetchone():
+            return HttpResponse(status=404, content=json.dumps({"detail": "Activity log not found"}))
+
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        params = []
+
+        for field, value in payload.dict(exclude_unset=True).items():
+            if value is not None:
+                update_fields.append(f"{field} = %s")
+                params.append(value)
+
+        if not update_fields:
+            # No fields to update, return current log
+            cursor.execute(
+                """
+                SELECT id, user_id, activity_type, timestamp, description
+                FROM user_activity_logs WHERE id = %s
+                """,
+                [log_id]
+            )
+            row = cursor.fetchone()
+            return {
+                "log_id": row[0],
+                "user_id": row[1],
+                "activity_type": row[2],
+                "timestamp": row[3],
+                "description": row[4],
+                "ip_address": row[5],
+                "resource_type": row[6],
+                "resource_id": row[7]
+            }
+
+        # Add log_id to params for WHERE clause
+        params.append(log_id)
+
+        # Execute update query
+        cursor.execute(
+            f"""
+            UPDATE user_activity_logs
+            SET {", ".join(update_fields)}
+            WHERE log_id = %s
+            RETURNING log_id, user_id, activity_type, timestamp, description, ip_address, resource_type, resource_id
+            """,
+            params
+        )
+
+        row = cursor.fetchone()
+        return {
+            "log_id": row[0],
+            "user_id": row[1],
+            "activity_type": row[2],
+            "timestamp": row[3],
+            "description": row[4],
+            "ip_address": row[5],
+            "resource_type": row[6],
+            "resource_id": row[7]
+        }
+
+
+@router.delete("/activity-logs/{log_id}/", response={204: None})
+def delete_activity_log(request, log_id: int):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM user_activity_logs WHERE id = %s", [log_id])
+        if not cursor.fetchone():
+            return HttpResponse(status=404, content=json.dumps({"detail": "Activity log not found"}))
+
+        cursor.execute("DELETE FROM user_activity_logs WHERE id = %s", [log_id])
+        return 204, None

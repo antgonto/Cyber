@@ -23,7 +23,7 @@ class Incident(models.Model):
     status = models.CharField(
         max_length=50, choices=StatusChoices.choices, default=StatusChoices.OPEN, verbose_name="Status"
     )
-    reported_date = models.DateTimeField(auto_now_add=True, verbose_name="Reported Date")
+    reported_date = models.DateTimeField(null=True, verbose_name="Reported Date")
     resolved_date = models.DateTimeField(null=True, blank=True, verbose_name="Resolved Date")
     assigned_to = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_incidents", verbose_name="Assigned To"

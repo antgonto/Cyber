@@ -48,6 +48,13 @@ const Sidebar = () => {
         },
         {
           id: '5',
+          name: 'Alerts',
+          onClick: () => navigate('/alerts'),
+          isSelected: location.pathname === '/alerts',
+          icon: <EuiIcon type="alert" />
+        },
+        {
+          id: '6',
           name: 'Settings',
           onClick: () => navigate('/settings'),
           isSelected: location.pathname === '/settings',

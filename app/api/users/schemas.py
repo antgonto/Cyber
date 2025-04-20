@@ -13,7 +13,7 @@ class UserSchema(Schema):
     date_joined: Optional[datetime] = Field(None, description="Timestamp when user joined")
 
     class Config:
-        schema_extra = {"examples": [{"username": "example_user", "email": "user@example.com", "role": "user"}]}
+        json_schema_extra = {"examples": [{"username": "example_user", "email": "user@example.com", "role": "user"}]}
         validate_assignment = True
 
 class UserCreateSchema(Schema):
@@ -43,3 +43,38 @@ class UserActivityLogSchema(Schema):
 
     class Config:
         input_exclude = {"activity_id", "timestamp"}
+
+
+# CRUD schemas for UserActivityLog
+class UserActivityLogFullSchema(Schema):
+    log_id: int = Field(..., description="ID of the activity log")
+    user_id: int = Field(..., description="ID of the user")
+    activity_type: str = Field(..., description="Type of activity")
+    timestamp: Optional[datetime] = Field(None, description="Timestamp of the activity")
+    description: Optional[str] = Field(None, description="Description of the activity")
+    ip_address: Optional[str] = Field(None, description="IP address")
+    resource_type: Optional[str] = Field(None, description="Type of resource")
+    resource_id: Optional[int] = Field(None, description="ID of resource")
+
+
+class UserActivityLogCreateSchema(Schema):
+    user_id: int = Field(..., description="ID of the user")
+    activity_type: str = Field(..., description="Type of activity")
+    description: Optional[str] = Field(None, description="Description of the activity")
+    ip_address: Optional[str] = Field(None, description="IP address")
+    resource_type: Optional[str] = Field(None, description="Type of resource")
+    resource_id: Optional[int] = Field(None, description="ID of resource")
+
+
+class UserActivityLogUpdateSchema(Schema):
+    description: Optional[str] = Field(None, description="Description of the activity")
+    resource_type: Optional[str] = Field(None, description="Type of resource")
+    resource_id: Optional[int] = Field(None, description="ID of resource")
+
+
+class UserActivityLogFilterSchema(Schema):
+    user_id: Optional[int] = Field(None, description="ID of the user")
+    activity_type: Optional[str] = Field(None, description="Type of activity")
+    from_date: Optional[str] = Field(None, description="Start date for filtering")
+    to_date: Optional[str] = Field(None, description="End date for filtering")
+    resource_type: Optional[str] = Field(None, description="Type of resource")

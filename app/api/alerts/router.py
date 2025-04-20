@@ -39,6 +39,7 @@ def list_alerts(
     status: Optional[str] = None,
     source: Optional[str] = None
 ):
+    print("Listing alerts with filters:", severity, status, source)
     """List all alerts with optional filtering"""
     with connection.cursor() as cursor:
         query = "SELECT alert_id, source, name, alert_type, alert_time, severity, status, incident_id FROM api_alert"

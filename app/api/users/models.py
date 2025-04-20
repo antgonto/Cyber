@@ -36,10 +36,22 @@ class User(models.Model):
         verbose_name_plural = "Users"
 
 class UserActivityLog(models.Model):
+    class ActivityTypeChoices(models.TextChoices):
+        LOGIN = "login", "User Login"
+        LOGOUT = "logout", "User Logout"
+        CREATE = "create", "Resource Creation"
+        UPDATE = "update", "Resource Update"
+        DELETE = "delete", "Resource Deletion"
+        VIEW = "view", "Resource View"
+
+    log_id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='activity_logs')
-    activity_type = models.CharField(max_length=100)
+    activity_type = models.CharField(max_length=100, choices=ActivityTypeChoices.choices)
     timestamp = models.DateTimeField(auto_now_add=True)
     description = models.TextField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    resource_type = models.CharField(max_length=100, null=True, blank=True)
+    resource_id = models.IntegerField(null=True, blank=True)
 
     class Meta:
         db_table = 'user_activity_logs'
@@ -47,6 +59,8 @@ class UserActivityLog(models.Model):
         verbose_name_plural = "User Activity Logs"
         indexes = [
             models.Index(fields=['user_id'], name='idx_ual_user_id'),
+            models.Index(fields=['activity_type'], name='idx_ual_activity_type'),
+            models.Index(fields=['timestamp'], name='idx_ual_timestamp'),
         ]
 
     def __str__(self):

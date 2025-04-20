@@ -27,7 +27,7 @@ class ThreatIntelligence(models.Model):
     confidence_level = models.CharField(max_length=50, choices=ConfidenceLevelChoices.choices)
     description = models.TextField()
     related_cve = models.CharField(max_length=100, null=True, blank=True)
-    date_identified = models.DateTimeField(auto_now_add=True)
+    date_identified = models.DateTimeField(auto_now=True)
     last_updated = models.DateTimeField(auto_now=True)
 
     # Many-to-many relationships
@@ -47,6 +47,7 @@ class ThreatIntelligence(models.Model):
 class ThreatAssetAssociation(models.Model):
     threat = models.ForeignKey(ThreatIntelligence, on_delete=models.CASCADE, related_name='asset_associations')
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='threat_associations')
+    notes = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'threat_asset_association'
@@ -65,6 +66,7 @@ class ThreatVulnerabilityAssociation(models.Model):
     threat = models.ForeignKey(ThreatIntelligence, on_delete=models.CASCADE,
                                related_name='vulnerability_associations')
     vulnerability = models.ForeignKey(Vulnerability, on_delete=models.CASCADE, related_name='threat_associations')
+    notes = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'threat_vulnerability_association'
