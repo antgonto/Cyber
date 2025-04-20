@@ -84,6 +84,7 @@ def list_alerts(
 
 @router.post("/", response=AlertSchema)
 def create_alert(request, alert: AlertSchema):
+    # print("alert: ", alert)
     """Create a new alert"""
     with connection.cursor() as cursor:
         # Validate incident_id if provided
@@ -118,8 +119,9 @@ def create_alert(request, alert: AlertSchema):
         return alert
 
 
-@router.get("/{alert_id}", response=AlertSchema)
+@router.get("/{alert_id}/", response=AlertSchema)
 def get_alert(request, alert_id: int):
+    print(alert_id)
     """Get alert by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -146,7 +148,7 @@ def get_alert(request, alert_id: int):
         return transform_alert_data(alert)
 
 
-@router.put("/{alert_id}", response=AlertSchema)
+@router.put("/{alert_id}/", response=AlertSchema)
 def update_alert(request, alert_id: int, alert: AlertSchema):
     """Update an existing alert"""
     with connection.cursor() as cursor:
@@ -242,7 +244,7 @@ def update_alert(request, alert_id: int, alert: AlertSchema):
         }
         return alert
 
-@router.delete("/{alert_id}", response=dict)
+@router.delete("/{alert_id}/", response=dict)
 def delete_alert(request, alert_id: int):
     """Delete an alert"""
     with connection.cursor() as cursor:
@@ -255,7 +257,7 @@ def delete_alert(request, alert_id: int):
         cursor.execute("DELETE FROM api_alert WHERE alert_id = %s", [alert_id])
         return {"success": True, "message": "Alert deleted"}
 
-@router.post("/{alert_id}/assign-incident/{incident_id}")
+@router.post("/{alert_id}/assign-incident/{incident_id}/")
 def assign_incident_to_alert(request, alert_id: int, incident_id: int):
     """Assign an incident to an alert"""
     with connection.cursor() as cursor:
@@ -301,7 +303,7 @@ def assign_incident_to_alert(request, alert_id: int, incident_id: int):
 
         return alert
 
-@router.post("/{alert_id}/remove-incident")
+@router.post("/{alert_id}/remove-incident/")
 def remove_incident_from_alert(request, alert_id: int):
     """Remove incident assignment from an alert"""
     with connection.cursor() as cursor:
