@@ -16,6 +16,7 @@ import UsersList from './pages/UserList';
 import AssetsList from "./pages/AssetList";
 import VulnerabilityList from "./pages/VulnerabilityList";
 import AlertsPage from "./pages/AlertsPage";
+import IncidentsPage from "./pages/IncidentsPage";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/assets" element={<AssetsList />} />
                 <Route path="/vulnerabilities" element={<VulnerabilityList />} />
                 <Route path="/alerts" element={<AlertsPage />} />
+                <Route path="/incidents" element={<IncidentsPage />} />
                 {/* Additional routes can be added here */}
               </Routes>
             </EuiFlexItem>

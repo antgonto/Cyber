@@ -43,7 +43,7 @@ export const alertService = {
   assignIncidentToAlert: (alertId, incidentId) =>
       api.post(`/app/v1/cyber/alerts/${alertId}/assign-incident/${incidentId}/`),
   removeIncidentFromAlert: (alertId) =>
-      api.post(`/app/v1/cyber/alerts/${alertId}/remove-incident}/`),
+      api.post(`/app/v1/cyber/alerts/${alertId}/remove-incident/`),
 };
 
 // Incidents
