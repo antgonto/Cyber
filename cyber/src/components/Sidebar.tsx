@@ -58,7 +58,7 @@ const Sidebar = () => {
           name: 'Incidents',
           onClick: () => navigate('/incidents'),
           isSelected: location.pathname === '/incidents',
-          icon: <EuiIcon type="incident" />
+          icon: <EuiIcon type="bolt" />
         },
         {
           id: '7',
