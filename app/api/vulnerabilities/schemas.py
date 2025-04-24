@@ -34,6 +34,7 @@ class VulnerabilityCreateSchema(Schema):
 
 
 class VulnerabilityUpdateSchema(Schema):
+    title: Optional[str] = Field(None, description="Detailed description of the vulnerability")
     description: Optional[str] = Field(None, description="Detailed description of the vulnerability")
     severity: Optional[str] = Field(None, description="Severity level of the vulnerability")
     cve_reference: Optional[str] = Field(None, description="CVE identifier reference")

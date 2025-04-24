@@ -104,6 +104,10 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
         update_fields = []
         params = []
 
+        if vulnerability_data.title:
+            update_fields.append("title = %s")
+            params.append(vulnerability_data.title)
+
         if vulnerability_data.description:
             update_fields.append("description = %s")
             params.append(vulnerability_data.description)

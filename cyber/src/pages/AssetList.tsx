@@ -1,242 +1,399 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   EuiBasicTable,
   EuiButton,
-  EuiButtonIcon,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiPage,
-  EuiPageBody,
-  EuiPageHeader,
-  EuiTitle,
-  EuiModal,
-  EuiModalHeader,
-  EuiModalHeaderTitle,
-  EuiModalBody,
-  EuiModalFooter,
-  EuiForm,
   EuiFormRow,
   EuiFieldText,
-  EuiSpacer
+  EuiSpacer,
+  EuiModal,
+  EuiModalBody,
+  EuiModalFooter,
+  EuiModalHeader,
+  EuiModalHeaderTitle,
+  EuiPageHeader,
+  EuiPanel,
+  EuiSelect,
+  EuiConfirmModal,
 } from '@elastic/eui';
 import { assetService } from '../services/api';
 
-const AssetsList = () => {
-  const [assets, setAssets] = useState([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentAsset, setCurrentAsset] = useState({ asset_id: '', asset_name: '', asset_type: '', location: '', owner: '', criticality_level: '' });
-  const [isEditing, setIsEditing] = useState(false);
+// Define asset interface
+interface Asset {
+  id: string;
+  asset_name: string;
+  assetType: string;
+  criticality_level: 'low' | 'medium' | 'high' | 'critical';
+  location: string;
+  owner: string;
+}
 
+// Backend asset interface
+interface BackendAsset {
+  asset_id: number;
+  asset_name: string;
+  asset_type: string;
+  criticality_level: string;
+  location: string;
+  owner: string;
+}
+
+const AssetList: React.FC = () => {
+  // State for assets data
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // State for modal and form
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
+  const [currentAsset, setCurrentAsset] = useState<Asset | null>(null);
+  const [formData, setFormData] = useState<Omit<Asset, 'id'>>({
+    asset_name: '',
+    assetType: '',
+    criticality_level: 'medium',
+    location: '',
+    owner: '',
+  });
+
+  // Fetch assets data
   useEffect(() => {
     fetchAssets();
   }, []);
 
   const fetchAssets = async () => {
+    setIsLoading(true);
     try {
       const response = await assetService.getAssets();
-      setAssets(response.data);
+      // Transform backend data format to match frontend Asset interface
+      const transformedData = response.data.map((asset: BackendAsset) => ({
+        id: asset.asset_id.toString(),
+        asset_name: asset.asset_name,
+        assetType: asset.asset_type,
+        criticality: asset.criticality_level as 'low' | 'medium' | 'high' | 'critical',
+        location: asset.location,
+        owner: asset.owner
+      }));
+      setAssets(transformedData);
     } catch (error) {
-      console.error('Error fetching assets:', error);
+      console.error('Failed to fetch assets:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOpenModal = (asset = null) => {
-    if (asset) {
-      setCurrentAsset({ ...asset, password: '' });
-      setIsEditing(true);
-    } else {
-      setCurrentAsset({ asset_id: '', asset_name: '', asset_type: '', location: '', owner: '', criticality_level: '' });
-      setIsEditing(false);
+  // Create new asset
+  const createAsset = async () => {
+    try {
+      const assetData = {
+        name: formData.asset_name,
+        asset_type: formData.assetType,
+        criticality: formData.criticality_level,
+        location: formData.location,
+        owner: formData.owner
+      };
+
+      const response = await assetService.createAsset(assetData);
+
+      // Add the new asset to the list
+      const newAsset: Asset = {
+        id: response.data.asset_id.toString(),
+        asset_name: response.data.asset_name,
+        assetType: response.data.asset_type,
+        criticality_level: response.data.criticality_level,
+        location: response.data.location,
+        owner: response.data.owner
+      };
+
+      setAssets([...assets, newAsset]);
+      closeModal();
+    } catch (error) {
+      console.error('Failed to create asset:', error);
     }
+  };
+
+  // Update existing asset
+  const updateAsset = async () => {
+    if (!currentAsset) return;
+
+    try {
+      const assetData = {
+        asset_name: formData.asset_name,
+        asset_type: formData.assetType,
+        criticality: formData.criticality_level,
+        location: formData.location,
+        owner: formData.owner
+      };
+
+      await assetService.updateAsset(currentAsset.id, assetData);
+
+      // Update the asset in the list
+      const updatedAssets = assets.map(asset =>
+        asset.id === currentAsset.id
+          ? { ...asset, ...formData }
+          : asset
+      );
+
+      setAssets(updatedAssets);
+      closeModal();
+    } catch (error) {
+      console.error('Failed to update asset:', error);
+    }
+  };
+
+  // Delete asset
+  const deleteAsset = async () => {
+    if (!currentAsset) return;
+
+    try {
+      await assetService.deleteAsset(currentAsset.id);
+
+      // Remove the asset from the list
+      const filteredAssets = assets.filter(
+        asset => asset.id !== currentAsset.id
+      );
+
+      setAssets(filteredAssets);
+      closeDeleteModal();
+    } catch (error) {
+      console.error('Failed to delete asset:', error);
+    }
+  };
+
+  // Handle form input changes
+  const handleInputChange = (field: string, value: any) => {
+    setFormData({
+      ...formData,
+      [field]: value,
+    });
+  };
+
+  // Open modal for creating new asset
+  const openCreateModal = () => {
+    setCurrentAsset(null);
+    setFormData({
+      asset_name: '',
+      assetType: '',
+      criticality_level: 'medium',
+      location: '',
+      owner: ''
+    });
     setIsModalVisible(true);
   };
 
-  const handleCloseModal = () => {
+  // Open modal for editing existing asset
+  const openEditModal = (asset: Asset) => {
+    setCurrentAsset(asset);
+    setFormData({
+      asset_name: asset.asset_name,
+      assetType: asset.assetType,
+      criticality_level: asset.criticality_level,
+      location: asset.location,
+      owner: asset.owner
+    });
+    setIsModalVisible(true);
+  };
+
+  // Open delete confirmation modal
+  const openDeleteModal = (asset: Asset) => {
+    setCurrentAsset(asset);
+    setIsDeleteModalVisible(true);
+  };
+
+  // Close modals
+  const closeModal = () => {
     setIsModalVisible(false);
+    setCurrentAsset(null);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setCurrentAsset({ ...currentAsset, [name]: value });
+  const closeDeleteModal = () => {
+    setIsDeleteModalVisible(false);
+    setCurrentAsset(null);
   };
 
-  const handleSubmit = async () => {
-    try {
-      if (isEditing) {
-        const { asset_id, ...assetData } = currentAsset;
-        await assetService.updateAsset(asset_id, assetData);
-      } else {
-        await assetService.createAsset(currentAsset);
-      }
-      handleCloseModal();
-      fetchAssets();
-    } catch (error) {
-      console.error('Error saving asset:', error);
-    }
-  };
-
-  const handleDeleteAsset = async (assetId) => {
-    try {
-      await assetService.deleteAsset(assetId);
-      fetchAssets();
-    } catch (error) {
-      console.error('Error deleting asset:', error);
-    }
-  };
-
+  // Table columns configuration
   const columns = [
     {
-      field: 'asset_id',
+      field: 'id',
       name: 'ID',
       sortable: true,
-      width: '50px',
+      width: '70px',
     },
     {
       field: 'asset_name',
       name: 'Asset Name',
       sortable: true,
+      truncateText: true,
     },
     {
-      field: 'asset_type',
+      field: 'assetType',
       name: 'Asset Type',
       sortable: true,
     },
     {
+      field: 'criticality',
+      name: 'Criticality',
+      sortable: true,
+      render: (criticality: Asset['criticality_level']) => {
+        const colors = {
+          low: 'success' as 'success',
+          medium: 'primary' as 'primary',
+          high: 'warning' as 'warning',
+          critical: 'danger' as 'danger',
+        };
+        return (
+          <EuiButton
+            size="s"
+            color={colors[criticality]}
+            fill
+          >
+            {/*{criticality ? criticality.charAt(0).toUpperCase() + criticality.slice(1) : ''}*/}
+            {criticality.charAt(0).toUpperCase() + criticality.slice(1)}
+          </EuiButton>
+        );
+      },
+    },
+    {
       field: 'location',
       name: 'Location',
+      sortable: true,
     },
     {
       field: 'owner',
       name: 'Owner',
+      sortable: true,
     },
     {
-      field: 'criticality_level',
-      name: 'Criticality Level',
-    },
-    {
-      field: 'asset_id',
       name: 'Actions',
-      render: (asset_id, asset) => (
-        <div>
-          <EuiButtonIcon
-            iconType="pencil"
-            aria-label="Edit"
-            onClick={() => handleOpenModal(asset)}
-          />
-          &nbsp;
-          <EuiButtonIcon
-            iconType="trash"
-            color="danger"
-            aria-label="Delete"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete this asset?')) {
-                handleDeleteAsset(asset.asset_id);
-              }
-            }}
-          />
-        </div>
-      ),
-    },
+      actions: [
+        {
+          name: 'Edit',
+          description: 'Edit this asset',
+          icon: 'pencil',
+          type: 'icon',
+          onClick: (asset: Asset) => openEditModal(asset),
+        },
+        {
+          name: 'Delete',
+          description: 'Delete this asset',
+          icon: 'trash',
+          type: 'icon',
+          color: 'danger' as 'danger',
+          onClick: (asset: Asset) => openDeleteModal(asset),
+        },
+      ],
+    } as any,
   ];
 
-  const modal = isModalVisible ? (
-    <EuiModal onClose={handleCloseModal} style={{ width: '500px' }}>
-      <EuiModalHeader>
-        <EuiModalHeaderTitle>
-          {isEditing ? 'Edit Asset' : 'Add New Asset'}
-        </EuiModalHeaderTitle>
-      </EuiModalHeader>
-
-      <EuiModalBody>
-        <EuiForm>
-          <EuiFormRow label="Asset Name">
-            <EuiFieldText
-              name="asset_name"
-              value={currentAsset.asset_name}
-              onChange={(e) => handleInputChange(e)}
-            />
-          </EuiFormRow>
-
-          <EuiFormRow label="Asset Type">
-            <EuiFieldText
-              name="asset_type"
-              value={currentAsset.asset_type}
-              onChange={(e) => handleInputChange(e)}
-            />
-          </EuiFormRow>
-
-          <EuiFormRow label="Location">
-            <EuiFieldText
-              name="location"
-              value={currentAsset.location || ''}
-              onChange={(e) => handleInputChange(e)}
-            />
-          </EuiFormRow>
-
-          <EuiFormRow label="Owner">
-            <EuiFieldText
-              name="owner"
-              value={currentAsset.owner || ''}
-              onChange={(e) => handleInputChange(e)}
-            />
-          </EuiFormRow>
-          <EuiFormRow label="Criticality Level">
-            <EuiFieldText
-              name="criticality_level"
-              value={currentAsset.criticality_level || ''}
-              onChange={(e) => handleInputChange(e)}
-            />
-          </EuiFormRow>
-        </EuiForm>
-      </EuiModalBody>
-
-      <EuiModalFooter>
-        <EuiButton onClick={handleCloseModal} fill={false}>
-          Cancel
-        </EuiButton>
-
-        <EuiButton onClick={handleSubmit} fill>
-          {isEditing ? 'Update' : 'Create'}
-        </EuiButton>
-      </EuiModalFooter>
-    </EuiModal>
-  ) : null;
-
   return (
-    <EuiPage>
-      <EuiPageBody>
-        <EuiPageHeader>
-          <EuiFlexGroup justifyContent="spaceBetween" alignItems="center">
-            <EuiFlexItem grow={false}>
-              <EuiTitle>
-                <h1>Assets Management</h1>
-              </EuiTitle>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiButton
-                iconType="plusInCircle"
-                onClick={() => handleOpenModal()}
-                fill
-              >
-                Add New Asset
-              </EuiButton>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiPageHeader>
+    <div style={{ padding: '24px' }}>
+      <EuiPageHeader
+        pageTitle="Assets Management"
+        rightSideItems={[
+          <EuiButton
+            fill
+            iconType="plusInCircle"
+            onClick={openCreateModal}
+          >
+            Create Asset
+          </EuiButton>,
+        ]}
+      />
 
-        <EuiSpacer size="l" />
+      <EuiSpacer size="l" />
 
+      <EuiPanel>
         <EuiBasicTable
           items={assets}
           columns={columns}
-          tableLayout="fixed"
+          loading={isLoading}
+          noItemsMessage="No assets found"
         />
+      </EuiPanel>
 
-        {modal}
-      </EuiPageBody>
-    </EuiPage>
+      {/* Create/Edit Modal */}
+      {isModalVisible && (
+        <EuiModal onClose={closeModal}>
+          <EuiModalHeader>
+            <EuiModalHeaderTitle>
+              {currentAsset ? 'Edit Asset' : 'Create New Asset'}
+            </EuiModalHeaderTitle>
+          </EuiModalHeader>
+
+          <EuiModalBody>
+            <EuiFormRow label="Name" labelType="label">
+              <EuiFieldText
+                placeholder="Enter asset name"
+                value={formData.asset_name}
+                onChange={(e) => handleInputChange('asset_name', e.target.value)}
+                required
+              />
+            </EuiFormRow>
+
+            <EuiFormRow label="Asset Type" labelType="label">
+              <EuiFieldText
+                placeholder="Type of asset (e.g., Server, Database, Network Device)"
+                value={formData.assetType}
+                onChange={(e) => handleInputChange('assetType', e.target.value)}
+              />
+            </EuiFormRow>
+
+            <EuiFormRow label="Criticality" labelType="label">
+              <EuiSelect
+                options={[
+                  { value: 'Low', text: 'Low' },
+                  { value: 'Medium', text: 'Medium' },
+                  { value: 'High', text: 'High' },
+                  { value: 'Critical', text: 'Critical' },
+                ]}
+                value={formData.criticality_level}
+                onChange={(e) => handleInputChange('criticality', e.target.value)}
+              />
+            </EuiFormRow>
+
+            <EuiFormRow label="Location" labelType="label">
+              <EuiFieldText
+                placeholder="Physical or virtual location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+              />
+            </EuiFormRow>
+
+            <EuiFormRow label="Owner" labelType="label">
+              <EuiFieldText
+                placeholder="Person or team responsible for this asset"
+                value={formData.owner}
+                onChange={(e) => handleInputChange('owner', e.target.value)}
+              />
+            </EuiFormRow>
+          </EuiModalBody>
+
+          <EuiModalFooter>
+            <EuiButton onClick={closeModal}>Cancel</EuiButton>
+            <EuiButton
+              fill
+              onClick={currentAsset ? updateAsset : createAsset}
+            >
+              {currentAsset ? 'Update' : 'Create'}
+            </EuiButton>
+          </EuiModalFooter>
+        </EuiModal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalVisible && (
+        <EuiConfirmModal
+          title="Delete Asset"
+          onCancel={closeDeleteModal}
+          onConfirm={deleteAsset}
+          cancelButtonText="Cancel"
+          confirmButtonText="Delete"
+          buttonColor="danger"
+        >
+          <p>Are you sure you want to delete asset "{currentAsset?.asset_name}"?</p>
+          <p>This action cannot be undone.</p>
+        </EuiConfirmModal>
+      )}
+    </div>
   );
 };
 
-export default AssetsList;
+export default AssetList;

@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   EuiBasicTable,
   EuiButton,
-  EuiButtonIcon,
-  EuiFlexGroup,
-  EuiFlexItem,
   EuiFormRow,
   EuiFieldText,
   EuiTextArea,
@@ -140,7 +137,7 @@ const IncidentsPage: React.FC = () => {
       // Update the incident in the list
       const updatedIncidents = incidents.map(incident =>
         incident.id === currentIncident.id
-          ? { ...incident, ...formData }
+          ? { ...incident, ...formData, dateCreated: incident.dateCreated }
           : incident
       );
 
@@ -369,7 +366,7 @@ const IncidentsPage: React.FC = () => {
 
             <EuiFormRow label="Assigned To">
               <EuiFieldText
-                placeholder="Enter assignee name"
+                placeholder="Username of assignee"
                 value={formData.assignedTo || ''}
                 onChange={(e) => handleInputChange('assignedTo', e.target.value)}
               />
