@@ -30,7 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['django', 'localhost']
 
-# APPEND_SLASH = False
+APPEND_SLASH = True
 
 # Application definition
 

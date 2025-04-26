@@ -86,13 +86,12 @@ const AssetList: React.FC = () => {
       const assetData = {
         name: formData.asset_name,
         asset_type: formData.assetType,
-        criticality: formData.criticality_level,
         location: formData.location,
-        owner: formData.owner
+         owner: formData.owner,
+        criticality: formData.criticality_level,
       };
 
       const response = await assetService.createAsset(assetData);
-
       // Add the new asset to the list
       const newAsset: Asset = {
         id: response.data.asset_id.toString(),

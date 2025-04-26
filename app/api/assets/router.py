@@ -29,6 +29,7 @@ def list_assets(request):
 
 @router.post("/", response=AssetSchema)
 def create_asset(request, asset_data: AssetCreateSchema):
+    print(asset_data)
     """Create a new asset"""
     with connection.cursor() as cursor:
         # Check if asset_name already exists
@@ -49,7 +50,13 @@ def create_asset(request, asset_data: AssetCreateSchema):
             VALUES (%s, %s, %s, %s, %s)
             RETURNING asset_id, asset_name, asset_type, location, owner, criticality_level
             """,
-            [asset_data.asset_name, asset_data.asset_type, asset_data.location, asset_data.owner, asset_data.criticality_level]
+            [
+                asset_data.asset_name,
+                asset_data.asset_type,
+                asset_data.location,
+                asset_data.owner,
+                asset_data.criticality_level
+            ]
         )
 
         row = cursor.fetchone()

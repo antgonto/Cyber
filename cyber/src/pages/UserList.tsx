@@ -137,11 +137,6 @@ const UserList: React.FC = () => {
         is_active: formData.status === 'Active',
       };
 
-      // Only include password if it was changed (not empty)
-      if (formData.password.trim() !== '') {
-        userData['password'] = formData.password;
-      }
-
       await userService.updateUser(currentUser.id, userData);
 
       // Update the user in the list
