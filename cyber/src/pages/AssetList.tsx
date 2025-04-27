@@ -32,9 +32,9 @@ interface BackendAsset {
   asset_id: number;
   asset_name: string;
   asset_type: string;
-  criticality_level: string;
   location: string;
   owner: string;
+  criticality_level: 'low' | 'medium' | 'high' | 'critical';
 }
 
 const AssetList: React.FC = () => {
@@ -68,9 +68,9 @@ const AssetList: React.FC = () => {
         id: asset.asset_id.toString(),
         asset_name: asset.asset_name,
         assetType: asset.asset_type,
-        criticality: asset.criticality_level as 'low' | 'medium' | 'high' | 'critical',
         location: asset.location,
-        owner: asset.owner
+        owner: asset.owner,
+        criticality_level: asset.criticality_level
       }));
       setAssets(transformedData);
     } catch (error) {
@@ -87,8 +87,8 @@ const AssetList: React.FC = () => {
         name: formData.asset_name,
         asset_type: formData.assetType,
         location: formData.location,
-         owner: formData.owner,
-        criticality: formData.criticality_level,
+        owner: formData.owner,
+        criticality_level: formData.criticality_level,
       };
 
       const response = await assetService.createAsset(assetData);
@@ -97,7 +97,7 @@ const AssetList: React.FC = () => {
         id: response.data.asset_id.toString(),
         asset_name: response.data.asset_name,
         assetType: response.data.asset_type,
-        criticality_level: response.data.criticality_level,
+        criticality_level: response.data.criticality_criticality_level,
         location: response.data.location,
         owner: response.data.owner
       };
@@ -117,9 +117,9 @@ const AssetList: React.FC = () => {
       const assetData = {
         asset_name: formData.asset_name,
         asset_type: formData.assetType,
-        criticality: formData.criticality_level,
         location: formData.location,
-        owner: formData.owner
+        owner: formData.owner,
+        criticality_level: formData.criticality_level,
       };
 
       await assetService.updateAsset(currentAsset.id, assetData);
@@ -171,9 +171,9 @@ const AssetList: React.FC = () => {
     setFormData({
       asset_name: '',
       assetType: '',
-      criticality_level: 'medium',
       location: '',
-      owner: ''
+      owner: '',
+      criticality_level: 'medium'
     });
     setIsModalVisible(true);
   };
@@ -184,9 +184,9 @@ const AssetList: React.FC = () => {
     setFormData({
       asset_name: asset.asset_name,
       assetType: asset.assetType,
-      criticality_level: asset.criticality_level,
       location: asset.location,
-      owner: asset.owner
+      owner: asset.owner,
+      criticality_level: asset.criticality_level
     });
     setIsModalVisible(true);
   };
@@ -220,7 +220,6 @@ const AssetList: React.FC = () => {
       field: 'asset_name',
       name: 'Asset Name',
       sortable: true,
-      truncateText: true,
     },
     {
       field: 'assetType',
@@ -228,10 +227,10 @@ const AssetList: React.FC = () => {
       sortable: true,
     },
     {
-      field: 'criticality',
+      field: 'criticality_level',
       name: 'Criticality',
       sortable: true,
-      render: (criticality: Asset['criticality_level']) => {
+      render: (criticality_level: Asset['criticality_level']) => {
         const colors = {
           low: 'success' as 'success',
           medium: 'primary' as 'primary',
@@ -241,11 +240,10 @@ const AssetList: React.FC = () => {
         return (
           <EuiButton
             size="s"
-            color={colors[criticality]}
+            color={colors[criticality_level]}
             fill
           >
-            {/*{criticality ? criticality.charAt(0).toUpperCase() + criticality.slice(1) : ''}*/}
-            {criticality.charAt(0).toUpperCase() + criticality.slice(1)}
+            {criticality_level.charAt(0).toUpperCase() + criticality_level.slice(1)}
           </EuiButton>
         );
       },
@@ -338,13 +336,13 @@ const AssetList: React.FC = () => {
             <EuiFormRow label="Criticality" labelType="label">
               <EuiSelect
                 options={[
-                  { value: 'Low', text: 'Low' },
-                  { value: 'Medium', text: 'Medium' },
-                  { value: 'High', text: 'High' },
-                  { value: 'Critical', text: 'Critical' },
+                  { value: 'low', text: 'Low' },
+                  { value: 'medium', text: 'Medium' },
+                  { value: 'high', text: 'High' },
+                  { value: 'critical', text: 'Critical' },
                 ]}
                 value={formData.criticality_level}
-                onChange={(e) => handleInputChange('criticality', e.target.value)}
+                onChange={(e) => handleInputChange('criticality_level', e.target.value)}
               />
             </EuiFormRow>
 

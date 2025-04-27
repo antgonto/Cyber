@@ -45,11 +45,11 @@ def list_threats(
                 ARRAY_AGG(DISTINCT i.incident_id) FILTER (WHERE i.incident_id IS NOT NULL) as incident_ids
             FROM api_threatintelligence t
             LEFT JOIN threat_asset_association taa ON t.threat_id = taa.threat_id
-            LEFT JOIN asset a ON taa.asset_id = a.asset_id
+            LEFT JOIN api_asset a ON taa.asset_id = a.asset_id
             LEFT JOIN threat_vulnerability_association tva ON t.threat_id = tva.threat_id
-            LEFT JOIN vulnerability v ON tva.vulnerability_id = v.vulnerability_id
-            LEFT JOIN incident_threat_association ita ON t.threat_id = ita.threat_id
-            LEFT JOIN incident i ON ita.incident_id = i.incident_id
+            LEFT JOIN api_vulnerability v ON tva.vulnerability_id = v.vulnerability_id
+            LEFT JOIN threat_incident_association ita ON t.threat_id = ita.threat_id
+            LEFT JOIN api_incident i ON ita.incident_id = i.incident_id
         """
 
         where_clauses = []
@@ -195,11 +195,11 @@ def get_threat(request, threat_id: int):
                 ARRAY_AGG(DISTINCT i.incident_id) FILTER (WHERE i.incident_id IS NOT NULL) as incident_ids
             FROM api_threatintelligence t
             LEFT JOIN threat_asset_association taa ON t.threat_id = taa.threat_id
-            LEFT JOIN asset a ON taa.asset_id = a.asset_id
+            LEFT JOIN api_asset a ON taa.asset_id = a.asset_id
             LEFT JOIN threat_vulnerability_association tva ON t.threat_id = tva.threat_id
-            LEFT JOIN vulnerability v ON tva.vulnerability_id = v.vulnerability_id
-            LEFT JOIN incident_threat_association ita ON t.threat_id = ita.threat_id
-            LEFT JOIN incident i ON ita.incident_id = i.incident_id
+            LEFT JOIN api_vulnerability v ON tva.vulnerability_id = v.vulnerability_id
+            LEFT JOIN threat_incident_association ita ON t.threat_id = ita.threat_id
+            LEFT JOIN api_incident i ON ita.incident_id = i.incident_id
             WHERE t.threat_id = %s
             GROUP BY t.threat_id
         """, [threat_id])

@@ -62,6 +62,13 @@ const Sidebar = () => {
         },
         {
           id: '7',
+          name: 'Threat Intelligence',
+          onClick: () => navigate('/threat_intelligence'),
+          isSelected: location.pathname === '/threat_intelligence',
+          icon: <EuiIcon type="bolt" />
+        },
+        {
+          id: '8',
           name: 'Settings',
           onClick: () => navigate('/settings'),
           isSelected: location.pathname === '/settings',
