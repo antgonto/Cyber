@@ -34,6 +34,9 @@ interface Threat {
   related_cve: string;
   date_identified: string;
   last_updated: string;
+  assets: number[];
+  vulnerabilities: number[];
+  incidents: number[];
 }
 
 // Backend shape
@@ -47,6 +50,9 @@ interface BackendThreat {
   related_cve: string;
   date_identified: string;
   last_updated: string;
+  assets: number[];
+  vulnerabilities: number[];
+  incidents: number[];
 }
 
 // Option shape for ComboBox
@@ -73,6 +79,9 @@ const ThreatIntelligenceList: React.FC = () => {
     related_cve: '',
     date_identified: '',
     last_updated: '',
+    assets: [],
+    vulnerabilities: [],
+    incidents: [],
   });
 
   // Options
@@ -135,6 +144,9 @@ const ThreatIntelligenceList: React.FC = () => {
       related_cve: '',
       date_identified: currentDate,
       last_updated: currentDate,
+      assets: [],
+      vulnerabilities: [],
+      incidents: [],
     });
     setIsModalVisible(true);
   };
@@ -150,6 +162,9 @@ const ThreatIntelligenceList: React.FC = () => {
       related_cve: threat.related_cve,
       date_identified: threat.date_identified,
       last_updated: threat.last_updated,
+      assets: threat.assets || [],
+      vulnerabilities: threat.vulnerabilities || [],
+      incidents: threat.incidents || [],
     });
     setIsModalVisible(true);
   };
@@ -226,14 +241,46 @@ const ThreatIntelligenceList: React.FC = () => {
     { field: 'indicator_value', name: 'Value', sortable: true },
     { field: 'confidence_level', name: 'Confidence', sortable: true },
     { field: 'related_cve', name: 'CVE', render: (cve: string) => cve || '-' },
+
     {
-      field: 'assets', name: 'Assets', render: (list: number[]) => list.length,
+      field: 'assets', name: 'Assets', render: (assetIds: number[]) => {
+        if (!assetIds || !Array.isArray(assetIds)) return '-';
+        if (!assetOptions) return '-'; // Add check for assetOptions
+
+        const assetNames = assetIds.map(id => {
+          const asset = assetOptions.find(option => option.value === id);
+          return asset ? asset.label : id.toString();
+        });
+        return assetNames.join(', ') || '-';
+      },
     },
+
+    // const [incidentOptions, setIncidentOptions] = useState<Option[]>([]);
+
     {
-      field: 'vulnerabilities', name: 'Vulns', render: (list: number[]) => list.length,
+      field: 'vulnerabilities', name: 'Vulnx', render: (vulnerabilitiesIds: number[]) => {
+        if (!vulnerabilitiesIds || !Array.isArray(vulnerabilitiesIds)) return '-';
+        if (!vulnOptions) return '-'; // Add check for vulnOptions
+
+        const vulneratbilitiesNames = vulnerabilitiesIds.map(id => {
+          const vulnerability = vulnOptions.find(option => option.value === id);
+          return vulnerability ? vulnerability.label : id.toString();
+        });
+        return vulneratbilitiesNames.join(', ') || '-';
+      },
     },
+
     {
-      field: 'incidents', name: 'Incidents', render: (list: number[]) => list.length,
+      field: 'incidents', name: 'Incidents', render: (incidentsIds: number[]) => {
+        if (!incidentsIds || !Array.isArray(incidentsIds)) return '-';
+        if (!incidentOptions) return '-'; // Add check for incidentOptions
+
+        const IncidentsNames = incidentsIds.map(id => {
+          const incident = incidentOptions.find(option => option.value === id);
+          return incident ? incident.label : id.toString();
+        });
+        return IncidentsNames.join(', ') || '-';
+      },
     },
     { name: 'Actions', actions: [
         { name: 'Edit', icon: 'pencil', type: 'icon', onClick: openEditModal },
