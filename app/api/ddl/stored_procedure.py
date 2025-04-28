@@ -1,3 +1,36 @@
+
+# PostgreSQL Stored Procedure: Incident Escalation Manager
+# This code defines a Python variable stored_proc containing a PostgreSQL stored procedure called manage_incident_escalation. The procedure automates security incident triage by:
+#
+#
+# Taking parameters for an incident ID and optional user override:
+#
+#
+# CREATE OR REPLACE PROCEDURE manage_incident_escalation(
+#     incident_id_param INTEGER,
+#     override_user_id INTEGER DEFAULT NULL
+# )
+# Gathering incident context by querying related tables for:
+#
+#
+# Basic incident details
+# Asset criticality levels
+# Threat intelligence confidence
+# Unacknowledged alert counts
+# Implementing escalation logic to determine appropriate roles:
+#
+#
+# IF incident_record.severity = 'critical' THEN
+#     appropriate_role := 'manager';
+#     escalation_reason := 'Critical severity incident';
+# Assigning incidents to users with the proper role using a round-robin approach.
+#
+#
+# Updating incident status to "investigating" for critical cases or when there are multiple unacknowledged alerts.
+#
+#
+# Logging all actions for audit purposes.
+
 stored_proc = """
 CREATE OR REPLACE PROCEDURE manage_incident_escalation(
     incident_id_param INTEGER,
@@ -132,3 +165,104 @@ $$;
 
 # CALL manage_incident_escalation(123);  -- Using default system assignment
 # CALL manage_incident_escalation(123, 5);  -- Manual override assigning to user ID 5
+
+
+# # app/api/endpoints/incidents.py
+# from ninja import Router
+# from django.db import connection
+# from typing import Dict
+#
+# router = Router()
+#
+#
+# @router.post("/incidents/{incident_id}/escalate/", response={200: Dict, 404: Dict})
+# def escalate_incident(request, incident_id: int, override_user_id: int = None):
+#     """Trigger the incident escalation procedure for a specific incident."""
+#     try:
+#         with connection.cursor() as cursor:
+#             # Call the stored procedure
+#             if override_user_id:
+#                 cursor.execute("CALL manage_incident_escalation(%s, %s)", [incident_id, override_user_id])
+#             else:
+#                 cursor.execute("CALL manage_incident_escalation(%s)", [incident_id])
+#
+#         return 200, {"message": f"Incident {incident_id} escalation process completed successfully"}
+#     except Exception as e:
+#         if "not found" in str(e):
+#             return 404, {"error": str(e)}
+#         return 500, {"error": str(e)}
+
+
+# // src/components/incidents/IncidentEscalationButton.tsx
+# // import React, { useState } from 'react';
+# // import axios from 'axios';
+# //
+# // interface EscalationButtonProps {
+# //   incidentId: number;
+# //   onSuccess?: () => void;
+# //   onError?: (error: string) => void;
+# // }
+# //
+# // const IncidentEscalationButton: React.FC<EscalationButtonProps> = ({
+# //   incidentId,
+# //   onSuccess,
+# //   onError
+# // }) => {
+# //   const [loading, setLoading] = useState(false);
+# //   const [showManualAssign, setShowManualAssign] = useState(false);
+# //   const [manualUserId, setManualUserId] = useState<number | null>(null);
+# //
+# //   const handleEscalate = async (overrideUserId?: number) => {
+# //     setLoading(true);
+# //     try {
+# //       const url = `/api/incidents/${incidentId}/escalate/`;
+# //       const params = overrideUserId ? { override_user_id: overrideUserId } : {};
+# //
+# //       await axios.post(url, params);
+# //       setLoading(false);
+# //       if (onSuccess) onSuccess();
+# //     } catch (error) {
+# //       setLoading(false);
+# //       if (onError) onError(error instanceof Error ? error.message : 'Unknown error');
+# //     }
+# //   };
+# //
+# //   return (
+# //     <div className="escalation-controls">
+# //       <button
+# //         className="escalate-btn primary"
+# //         onClick={() => handleEscalate()}
+# //         disabled={loading}
+# //       >
+# //         {loading ? "Processing..." : "Auto-Escalate Incident"}
+# //       </button>
+# //
+# //       <button
+# //         className="escalate-btn secondary"
+# //         onClick={() => setShowManualAssign(!showManualAssign)}
+# //         disabled={loading}
+# //       >
+# //         Manual Assignment
+# //       </button>
+# //
+# //       {showManualAssign && (
+# //         <div className="manual-assign-form">
+# //           <input
+# //             type="number"
+# //             placeholder="User ID"
+# //             value={manualUserId || ''}
+# //             onChange={(e) => setManualUserId(parseInt(e.target.value) || null)}
+# //           />
+# //           <button
+# //             onClick={() => manualUserId && handleEscalate(manualUserId)}
+# //             disabled={!manualUserId || loading}
+# //           >
+# //             Assign & Escalate
+# //           </button>
+# //         </div>
+# //       )}
+# //     </div>
+# //   );
+# // };
+# //
+# // export default IncidentEscalationButton;
