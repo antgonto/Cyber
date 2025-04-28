@@ -65,7 +65,7 @@ const Sidebar = () => {
           name: 'Threat Intelligence',
           onClick: () => navigate('/threat_intelligence'),
           isSelected: location.pathname === '/threat_intelligence',
-          icon: <EuiIcon type="bolt" />
+          icon: <EuiIcon type="errorFilled" />
         },
         {
           id: '8',

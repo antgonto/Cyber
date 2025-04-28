@@ -15,6 +15,7 @@ import {
   EuiComboBox,
   EuiConfirmModal,
   EuiTextArea,
+  EuiSelect,
 } from '@elastic/eui';
 import {
   threatsService,
@@ -276,7 +277,7 @@ const ThreatIntelligenceList: React.FC = () => {
       field: 'confidence_level',
       name: 'Confidence',
       sortable: true,
-      render: (role: Threat['confidence_level']) => {
+      render: (threat: Threat['confidence_level']) => {
         const colors = {
           low: 'success' as 'success',
           medium: 'primary' as 'primary',
@@ -286,10 +287,10 @@ const ThreatIntelligenceList: React.FC = () => {
         return (
           <EuiButton
             size="s"
-            color={colors[role]}
+            color={colors[threat]}
             fill
           >
-            {role.charAt(0).toUpperCase() + role.slice(1)}
+            {threat.charAt(0).toUpperCase() + threat.slice(1)}
           </EuiButton>
         );
       },
@@ -383,7 +384,16 @@ const ThreatIntelligenceList: React.FC = () => {
               <EuiFieldText value={formData.indicator_value} onChange={e => handleInputChange('indicator_value', e.target.value)} />
             </EuiFormRow>
             <EuiFormRow label="Confidence Level">
-              <EuiFieldText value={formData.confidence_level} onChange={e => handleInputChange('confidence_level', e.target.value)} />
+                <EuiSelect
+                  options={[
+                    { value: 'low', text: 'Low' },
+                    { value: 'medium', text: 'Medium' },
+                    { value: 'high', text: 'High' },
+                    { value: 'critical', text: 'Critical' },
+                  ]}
+                  value={formData.confidence_level}
+                  onChange={(e) => handleInputChange('confidence_level', e.target.value)}
+                />
             </EuiFormRow>
             <EuiFormRow label="Related CVE">
               <EuiFieldText value={formData.related_cve} onChange={e => handleInputChange('related_cve', e.target.value)} />
