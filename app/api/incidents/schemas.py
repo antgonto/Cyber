@@ -25,8 +25,6 @@ class IncidentSchema(Schema):
         update_exclude_none = True
 
 
-
-
 class IncidentAssetSchema(Schema):
     incident_id: int = Field(..., description="ID of the incident")
     asset_id: int = Field(..., description="ID of the asset")

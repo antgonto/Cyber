@@ -5,8 +5,6 @@ from ninja import Schema
 from pydantic import Field
 
 
-
-
 class ThreatIntelligenceSchema(Schema):
     threat_id: Optional[int] = Field(None, description="Unique identifier of the threat")
     threat_actor_name: str = Field(..., description="Name of the threat actor")
@@ -17,6 +15,10 @@ class ThreatIntelligenceSchema(Schema):
     related_cve: Optional[str] = Field(None, description="Related CVE identifier")
     date_identified: Optional[datetime] = Field(default_factory=datetime.now, description="Date when threat was identified")
     last_updated: Optional[datetime] = Field(default_factory=datetime.now, description="Date when threat was last updated")
+    assets: Optional[List[int]] = Field(None, description="List of associated asset IDs")
+    vulnerabilities: Optional[List[int]] = Field(None, description="List of associated vulnerability IDs")
+    incidents: Optional[List[int]] = Field(None, description="List of associated incident IDs")
+
 
 
 class ThreatAssetAssociationSchema(Schema):

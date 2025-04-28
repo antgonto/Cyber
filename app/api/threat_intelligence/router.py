@@ -50,8 +50,9 @@ def list_threats(
             LEFT JOIN api_vulnerability v ON tva.vulnerability_id = v.vulnerability_id
             LEFT JOIN threat_incident_association ita ON t.threat_id = ita.threat_id
             LEFT JOIN api_incident i ON ita.incident_id = i.incident_id
+            GROUP BY t.threat_id, t.threat_actor_name, t.indicator_type, t.indicator_value,
+                     t.confidence_level, t.description, t.related_cve, t.date_identified, t.last_updated
         """
-
         where_clauses = []
         params = []
 
@@ -72,13 +73,11 @@ def list_threats(
             query += " WHERE " + " AND ".join(where_clauses)
 
         query += """
-            GROUP BY t.threat_id
             ORDER BY t.threat_id
         """
 
         cursor.execute(query, params)
         threats_raw = dictfetchall(cursor)
-
         # Process the results to handle array data
         threats = []
         for threat in threats_raw:
@@ -170,7 +169,7 @@ def create_threat(request, payload: ThreatIntelligenceSchema):
                 if payload.incidents:
                     for incident_id in payload.incidents:
                         cursor.execute("""
-                            INSERT INTO incident_threat_association (threat_id, incident_id)
+                            INSERT INTO threat_incident_association (threat_id, incident_id)
                             VALUES (%s, %s)
                         """, [threat_id, incident_id])
 
@@ -256,56 +255,50 @@ def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
 
                 cursor.execute("""
                     UPDATE api_threatintelligence
-                    SET threat_actor_name = %s,
-                        indicator_type = %s,
-                        indicator_value = %s,
-                        confidence_level = %s,
-                        description = %s,
-                        related_cve = %s,
-                        last_updated = NOW()
+                    SET threat_actor_name = %s, indicator_type = %s, indicator_value = %s, confidence_level = %s,
+                        description = %s, related_cve = %s, last_updated = NOW()
                     WHERE threat_id = %s
                     RETURNING last_updated
-                """, [
-                    payload.threat_actor_name,
-                    payload.indicator_type,
-                    payload.indicator_value,
-                    payload.confidence_level,
-                    payload.description,
-                    payload.related_cve,
-                    threat_id
-                ])
+                """, [payload.threat_actor_name, payload.indicator_type, payload.indicator_value,
+                      payload.confidence_level, payload.description, payload.related_cve, threat_id])
                 last_updated = cursor.fetchone()[0]
 
-                # Update asset associations
+                # First, delete all existing associations
                 cursor.execute("DELETE FROM threat_asset_association WHERE threat_id = %s", [threat_id])
+                cursor.execute("DELETE FROM threat_vulnerability_association WHERE threat_id = %s", [threat_id])
+                cursor.execute("DELETE FROM threat_incident_association WHERE threat_id = %s", [threat_id])
+
+                # Then create new asset associations
                 if payload.assets:
                     for asset_id in payload.assets:
                         cursor.execute("""
                             INSERT INTO threat_asset_association (threat_id, asset_id)
                             VALUES (%s, %s)
+                            ON CONFLICT (threat_id, asset_id) DO NOTHING
                         """, [threat_id, asset_id])
 
-                # Update vulnerability associations
-                cursor.execute("DELETE FROM threat_vulnerability_association WHERE threat_id = %s", [threat_id])
+                # Create new vulnerability associations
                 if payload.vulnerabilities:
                     for vulnerability_id in payload.vulnerabilities:
                         cursor.execute("""
                             INSERT INTO threat_vulnerability_association (threat_id, vulnerability_id)
                             VALUES (%s, %s)
+                            ON CONFLICT (threat_id, vulnerability_id) DO NOTHING
                         """, [threat_id, vulnerability_id])
 
-                # Update incident associations
-                cursor.execute("DELETE FROM incident_threat_association WHERE threat_id = %s", [threat_id])
+                # Create new incident associations
                 if payload.incidents:
                     for incident_id in payload.incidents:
                         cursor.execute("""
-                            INSERT INTO incident_threat_association (threat_id, incident_id)
+                            INSERT INTO threat_incident_association (threat_id, incident_id)
                             VALUES (%s, %s)
+                            ON CONFLICT (threat_id, incident_id) DO NOTHING
                         """, [threat_id, incident_id])
 
         return 200, {"threat_id": threat_id, "last_updated": last_updated}
     except Exception as e:
         return 400, {"message": str(e)}
+
 
 
 @router.delete("/{threat_id}", response={200: ThreatIntelligenceDeleteResponseSchema, 404: ErrorSchema})
@@ -320,7 +313,7 @@ def delete_threat(request, threat_id: int):
             # Delete associations first to avoid foreign key constraint violations
             cursor.execute("DELETE FROM threat_asset_association WHERE threat_id = %s", [threat_id])
             cursor.execute("DELETE FROM threat_vulnerability_association WHERE threat_id = %s", [threat_id])
-            cursor.execute("DELETE FROM incident_threat_association WHERE threat_id = %s", [threat_id])
+            cursor.execute("DELETE FROM threat_incident_association WHERE threat_id = %s", [threat_id])
 
             # Then delete the threat itself
             cursor.execute("DELETE FROM api_threatintelligence WHERE threat_id = %s", [threat_id])
@@ -386,8 +379,9 @@ def add_asset_to_threat(request, threat_asset_data: ThreatAssetAssociationSchema
                     status=400,
                     content=json.dumps({"detail": "Referenced threat not found"})
                 )
+
             # Verify asset exists
-            cursor.execute("SELECT asset_id FROM asset WHERE asset_id = %s",
+            cursor.execute("SELECT asset_id FROM api_asset WHERE asset_id = %s",
                            [threat_asset_data.asset_id])
             if not cursor.fetchone():
                 return HttpResponse(
@@ -472,9 +466,8 @@ def update_threat_asset(request, threat_asset_data: ThreatAssetAssociationSchema
 
         return threat_asset_data
 
-
 # Delete association
-@router.delete("/threats/{threat_id}/{asset_id}", response={200: dict, 404: ErrorSchema})
+@router.delete("/assets/{threat_id}/{asset_id}", response={200: dict, 404: ErrorSchema})
 def remove_asset_from_threat(request, threat_id: int, asset_id: int):
     with connection.cursor() as cursor:
         # Check if association exists
@@ -507,9 +500,9 @@ def get_vulnerabilities_from_threat(request, threat_id: int):
                 status=404,
                 content=json.dumps({"detail": "Threat not found"})
             )
-
         # Get associations
-        cursor.execute("SELECT threat_id, vulnerability_id, notes FROM threat_incident_association WHERE vulnerability_id = %s",
+        cursor.execute(
+            "SELECT threat_id, vulnerability_id, notes FROM threat_vulnerability_association WHERE threat_id = %s",
             [threat_id]
         )
 
