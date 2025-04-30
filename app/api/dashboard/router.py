@@ -1,42 +1,37 @@
-from ninja import Router, Schema
-from ninja.pagination import paginate
+from ninja import Router, Schema, Query
 from typing import Optional, List
 from django.db import connection
 from datetime import datetime
 
-
-# Router definition
 router = Router(tags=["dashboard"])
 
-# Schema definitions
 class IncidentDashboardResponse(Schema):
-    incident_id: Optional[int] = None
-    incident_type: Optional[str] = None
-    incident_description: Optional[str] = None
-    incident_severity: Optional[str] = None
-    incident_status: Optional[str] = None
-    reported_date: Optional[datetime] = None
-    resolved_date: Optional[datetime] = None
-    assigned_user_id: Optional[int] = None
-    assigned_username: Optional[str] = None
-    assigned_email: Optional[str] = None
-    assigned_user_role: Optional[str] = None
-    affected_assets_count: Optional[int] = None
-    affected_asset_names: Optional[str] = None
-    highest_asset_criticality: Optional[str] = None
-    related_vulnerabilities_count: Optional[int] = None
-    vulnerability_titles: Optional[str] = None
-    related_cves: Optional[str] = None
-    related_threats_count: Optional[int] = None
-    threat_actors: Optional[str] = None
-    highest_threat_confidence: Optional[str] = None
-    related_alerts_count:Optional[int] = None
-    highest_alert_severity: Optional[str] = None
-    unacknowledged_alerts_count: Optional[int] = None
-    last_activity_time: Optional[datetime] = None
-    activity_count: Optional[int] = None
-    resolution_time_hours: Optional[float] = None
-
+    incident_id: Optional[int]
+    incident_type: Optional[str]
+    incident_description: Optional[str]
+    incident_severity: Optional[str]
+    incident_status: Optional[str]
+    reported_date: Optional[datetime]
+    resolved_date: Optional[datetime]
+    assigned_user_id: Optional[int]
+    assigned_username: Optional[str]
+    assigned_email: Optional[str]
+    assigned_user_role: Optional[str]
+    affected_assets_count: Optional[int]
+    affected_asset_names: Optional[str]
+    highest_asset_criticality: Optional[str]
+    related_vulnerabilities_count: Optional[int]
+    vulnerability_titles: Optional[str]
+    related_cves: Optional[str]
+    related_threats_count: Optional[int]
+    threat_actors: Optional[str]
+    highest_threat_confidence: Optional[str]
+    related_alerts_count: Optional[int]
+    highest_alert_severity: Optional[str]
+    unacknowledged_alerts_count: Optional[int]
+    last_activity_time: Optional[datetime]
+    activity_count: Optional[int]
+    resolution_time_hours: Optional[float]
 
 class IncidentDashboardFilterParams(Schema):
     incident_status: Optional[str] = None
@@ -45,69 +40,62 @@ class IncidentDashboardFilterParams(Schema):
     min_resolution_time_hours: Optional[float] = None
     max_resolution_time_hours: Optional[float] = None
 
+class PaginatedIncidentDashboard(Schema):
+    items: List[IncidentDashboardResponse]
+    count: int
 
-@router.get("/", response=List[IncidentDashboardResponse])
-@paginate()
+@router.get("/", response=PaginatedIncidentDashboard)
 def get_dashboard_incidents(
-        request,
-        filters: IncidentDashboardFilterParams = None,
-        page: int = 1,
-        per_page: int = 10
+    request,
+    incident_status: Optional[str] = Query(None),
+    incident_severity: Optional[str] = Query(None),
+    assigned_user_id: Optional[int] = Query(None),
+    min_resolution_time_hours: Optional[float] = Query(None),
+    max_resolution_time_hours: Optional[float] = Query(None),
+    page: int = Query(1, alias="page", ge=1),
+    per_page: int = Query(10, alias="per_page", ge=1),
 ):
-    """Get incidents from the incident_management_dashboard view with optional filtering"""
+    # pack into your filter schema (optional, but keeps your code DRY)
+    filters = IncidentDashboardFilterParams(
+        incident_status=incident_status.capitalize() if incident_status else None,
+        incident_severity=incident_severity.capitalize() if incident_severity else None,
+        assigned_user_id=assigned_user_id,
+        min_resolution_time_hours=min_resolution_time_hours,
+        max_resolution_time_hours=max_resolution_time_hours,
+    )
 
-    # Initialize filters if not provided
-    if filters is None:
-        filters = IncidentDashboardFilterParams()
+    base_q = "SELECT * FROM incident_management_dashboard WHERE 1=1"
+    params: list = []
 
-    try:
-        query = "SELECT * FROM incident_management_dashboard WHERE 1=1"
-        params = []
+    if filters.incident_status:
+        base_q += " AND incident_status = %s"
+        params.append(filters.incident_status)
+    if filters.incident_severity:
+        base_q += " AND incident_severity = %s"
+        params.append(filters.incident_severity)
+    if filters.assigned_user_id:
+        base_q += " AND assigned_user_id = %s"
+        params.append(filters.assigned_user_id)
+    if filters.min_resolution_time_hours is not None:
+        base_q += " AND resolution_time_hours >= %s"
+        params.append(filters.min_resolution_time_hours)
+    if filters.max_resolution_time_hours is not None:
+        base_q += " AND resolution_time_hours <= %s"
+        params.append(filters.max_resolution_time_hours)
 
-        # Apply filters
-        if filters.incident_status:
-            query += " AND incident_status = %s"
-            params.append(filters.incident_status)
+    # total count
+    count_sql = f"SELECT COUNT(*) FROM ({base_q}) AS cnt"
+    with connection.cursor() as cursor:
+        cursor.execute(count_sql, params)
+        total = cursor.fetchone()[0]
 
-        if filters.incident_severity:
-            query += " AND incident_severity = %s"
-            params.append(filters.incident_severity)
+    # apply ordering and pagination
+    base_q += " ORDER BY reported_date DESC LIMIT %s OFFSET %s"
+    params.extend([per_page, (page - 1) * per_page])
+    print(base_q, params)
+    with connection.cursor() as cursor:
+        cursor.execute(base_q, params)
+        cols = [c[0] for c in cursor.description]
+        rows = [dict(zip(cols, r)) for r in cursor.fetchall()]
 
-        if filters.assigned_user_id:
-            query += " AND assigned_user_id = %s"
-            params.append(filters.assigned_user_id)
-
-        if filters.min_resolution_time_hours is not None:
-            query += " AND resolution_time_hours >= %s"
-            params.append(filters.min_resolution_time_hours)
-
-        if filters.max_resolution_time_hours is not None:
-            query += " AND resolution_time_hours <= %s"
-            params.append(filters.max_resolution_time_hours)
-
-        # Count total for pagination
-        count_query = f"SELECT COUNT(*) FROM ({query}) AS count_query"
-        with connection.cursor() as cursor:
-            cursor.execute(count_query, params)
-            total = cursor.fetchone()[0]
-
-        # Apply sorting (default to reported_date DESC if not specified)
-        query += " ORDER BY reported_date DESC"
-
-        # Apply pagination
-        offset = (page - 1) * per_page
-        query += f" LIMIT %s OFFSET %s"
-        params.extend([per_page, offset])
-
-        # Execute query
-        with connection.cursor() as cursor:
-            cursor.execute(query, params)
-            columns = [c[0] for c in cursor.description]
-            rows = [dict(zip(columns, r)) for r in cursor.fetchall()]
-        return rows
-
-    except Exception as e:
-        # Log the error for debugging
-        print(f"Dashboard query error: {str(e)}")
-        # Handle error in a way that conforms to response schema
-        return {"items": [], "count": 0}
+    return {"items": rows, "count": total}
