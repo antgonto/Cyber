@@ -1,7 +1,7 @@
 from ninja import Router
 from django.db import connection
 from django.http import HttpResponse
-from typing import List, Optional
+from typing import Optional
 import json
 
 from app.api.alerts.schemas import AlertListSchema, AlertSchema

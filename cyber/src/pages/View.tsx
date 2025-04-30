@@ -43,8 +43,8 @@ interface FilterParams {
   incident_status?: string;
   incident_severity?: string;
   assigned_user_id?: number;
-  min_resolution_time?: number;
-  max_resolution_time?: number;
+  min_resolution_time_hours?: number;
+  max_resolution_time_hours?: number;
   page?: number;
   per_page?: number;
 }
@@ -117,10 +117,16 @@ const IncidentDashboard: React.FC = () => {
     });
   };
 
-  const handleFilterChange = (key: keyof FilterParams, value: string | number | null) => {
+  const handleFilterChange = <K extends keyof FilterParams>(key: K, value: FilterParams[K] | null) => {
+    console.log('filter: ', key, value);
     setFilters((prev) => {
-      const updated = { ...prev, [key]: value === '' ? undefined : value };
-      if (updated[key] === undefined) delete updated[key];
+      const val = value == null || value === '' ? undefined : value;
+      const updated = { ...prev };
+      if (val === undefined) {
+        delete updated[key];
+      } else {
+        updated[key] = val;
+      }
       return updated;
     });
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
@@ -129,6 +135,7 @@ const IncidentDashboard: React.FC = () => {
   const applyFilters = () => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
     fetchIncidents({
+      ...filters,
       page: 1,
       per_page: pagination.pageSize,
     });
@@ -309,14 +316,10 @@ const IncidentDashboard: React.FC = () => {
                 <EuiFlexItem>
                   <EuiFieldNumber
                     placeholder="Min"
-                    value={
-                      filters.min_resolution_time !== undefined
-                        ? filters.min_resolution_time
-                        : ''
-                    }
+                    value={filters.min_resolution_time_hours ?? ''}
                     onChange={(e) =>
                       handleFilterChange(
-                        'min_resolution_time',
+                        'min_resolution_time_hours',
                         e.target.value ? parseFloat(e.target.value) : null
                       )
                     }
@@ -326,13 +329,10 @@ const IncidentDashboard: React.FC = () => {
                   <EuiFieldNumber
                     placeholder="Max"
                     value={
-                      filters.max_resolution_time !== undefined
-                        ? filters.max_resolution_time
-                        : ''
-                    }
+                      filters.max_resolution_time_hours ?? ''}
                     onChange={(e) =>
                       handleFilterChange(
-                        'max_resolution_time',
+                        'max_resolution_time_hours',
                         e.target.value ? parseFloat(e.target.value) : null
                       )
                     }

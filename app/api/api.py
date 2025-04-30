@@ -13,7 +13,6 @@ api = NinjaAPI(
     urls_namespace="api",
 )
 
-api.add_router("/dashboard/", "app.api.dashboard.router.router", tags=["dashboard"])
 api.add_router("/users/", "app.api.users.router.router", tags=["users"])
 api.add_router("/assets/", "app.api.assets.router.router", tags=["assets"])
 api.add_router("/vulnerabilities/", "app.api.vulnerabilities.router.router", tags=["vulnerabilities"])
@@ -21,3 +20,4 @@ api.add_router("/alerts/", "app.api.alerts.router.router", tags=["alerts"])
 api.add_router("/incidents/", "app.api.incidents.router.router", tags=["incidents"])
 api.add_router("/threat_intelligence/", "app.api.threat_intelligence.router.router", tags=["threat_intelligence"])
 api.add_router("/ddl/", "app.api.ddl.router.router", tags=["ddl"])
+api.add_router("/dashboard/", "app.api.dashboard.router.router", tags=["dashboard"])
