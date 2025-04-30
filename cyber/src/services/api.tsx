@@ -7,7 +7,8 @@ const API_URL = raw && raw !== '' ? raw : 'http://localhost:8000';
 
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: 'http://localhost:8000',
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -112,7 +113,12 @@ export const threatsService = {
 
 // dashboard
 export const dashboardService = {
-  getDashboard: (filters) => api.get('/app/v1/cyber/dashboard/', {params: filters}),
+  getDashboard: async (params: { page?: number; per_page?: number; [key: string]: any } = {}) => {
+    const { page = 1, per_page = 10, ...filterParams } = params;
+    // put filterProps at top level
+    const requestParams = { page, per_page, ...filterParams };
+    return api.get('/app/v1/cyber/dashboard/', { params: requestParams });
+  },
 };
 
 export default api;

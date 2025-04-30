@@ -48,8 +48,17 @@ class IncidentDashboardFilterParams(Schema):
 
 @router.get("/", response=List[IncidentDashboardResponse])
 @paginate()
-def get_dashboard_incidents(request, filters: IncidentDashboardFilterParams):
+def get_dashboard_incidents(
+        request,
+        filters: IncidentDashboardFilterParams = None,
+        page: int = 1,
+        per_page: int = 10
+):
     """Get incidents from the incident_management_dashboard view with optional filtering"""
+
+    # Initialize filters if not provided
+    if filters is None:
+        filters = IncidentDashboardFilterParams()
 
     try:
         query = "SELECT * FROM incident_management_dashboard WHERE 1=1"
@@ -86,25 +95,19 @@ def get_dashboard_incidents(request, filters: IncidentDashboardFilterParams):
         query += " ORDER BY reported_date DESC"
 
         # Apply pagination
-        page = getattr(filters, 'page', 1)
-        per_page = getattr(filters, 'per_page', 10)
-
         offset = (page - 1) * per_page
         query += f" LIMIT %s OFFSET %s"
         params.extend([per_page, offset])
 
         # Execute query
-        items = []
         with connection.cursor() as cursor:
             cursor.execute(query, params)
-            columns = [col[0] for col in cursor.description]
-
-            for row in cursor.fetchall():
-                item = dict(zip(columns, row))
-                items.append(item)
-
-        return {"items": items, "count": total}
+            columns = [c[0] for c in cursor.description]
+            rows = [dict(zip(columns, r)) for r in cursor.fetchall()]
+        return rows
 
     except Exception as e:
+        # Log the error for debugging
+        print(f"Dashboard query error: {str(e)}")
         # Handle error in a way that conforms to response schema
         return {"items": [], "count": 0}

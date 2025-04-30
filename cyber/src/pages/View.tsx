@@ -64,35 +64,31 @@ const IncidentDashboard: React.FC = () => {
     async (params: FilterParams = {}) => {
       setLoading(true);
       try {
+        // Merge current filters with new params
         const queryParams = {
-          ...Object.fromEntries(
-            Object.entries({
-              ...filters,
-              ...params,
-            }).filter(([, value]) => value !== undefined && value !== null)
-          ),
-        };
-        const response = await dashboardService.getDashboard({
-          ...queryParams,
+          ...filters,
+          ...params,
           page: params.page ?? pagination.pageIndex + 1,
-          per_page: params.per_page ?? pagination.pageSize,
+          per_page: params.per_page ?? pagination.pageSize
+        };
+
+        // Remove any undefined/null values
+        Object.keys(queryParams).forEach(key => {
+          if (queryParams[key] === undefined || queryParams[key] === null) {
+            delete queryParams[key];
+          }
         });
-        console.log('Response:', response);
+
+        const response = await dashboardService.getDashboard(queryParams);
         const data = response.data;
 
-        // Map to response structure from Django Ninja paginate
-        const items = data.items || [];
-        const currentPage = params.page ?? pagination.pageIndex + 1;
-        const perPage = params.per_page ?? pagination.pageSize;
-        const totalCount = data.count ?? pagination.totalItemCount;
-
-        setIncidents(items);
+        setIncidents(data.items || []);
         setPagination({
-          pageIndex: currentPage - 1,
-          pageSize: perPage,
-          totalItemCount: totalCount,
+          pageIndex: (params.page ?? pagination.pageIndex + 1) - 1,
+          pageSize: params.per_page ?? pagination.pageSize,
+          totalItemCount: data.count || 0
         });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error fetching incidents:', error);
         setShowErrorModal(true);
       } finally {
