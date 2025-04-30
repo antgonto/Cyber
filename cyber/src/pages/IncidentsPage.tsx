@@ -17,6 +17,7 @@ import {
   EuiConfirmModal,
 } from '@elastic/eui';
 import { incidentService } from '../services/api';
+import {EuiButtonProps} from "@elastic/eui/src/components/button/button";
 
 // Define incident interface
 interface Incident {
@@ -229,28 +230,42 @@ const IncidentsPage: React.FC = () => {
       field: 'severity',
       name: 'Severity',
       sortable: true,
-      render: (severity: Incident['severity']) => {
-        const colors = {
-          low: 'success' as 'success',
-          medium: 'primary' as 'primary',
-          high: 'warning' as 'warning',
-          critical: 'danger' as 'danger',
+      render: (severity: string) => {
+        const key = severity.toLowerCase();
+        const colors: Record<string, 'danger' | 'warning' | 'accent' | 'success'> = {
+          critical: 'danger',
+          high: 'warning',
+          medium: 'accent',
+          low: 'success',
         };
+        const color = colors[key] || 'accent';
         return (
-          <EuiButton
-            size="s"
-            color={colors[severity]}
-            fill
-          >
-            {severity.charAt(0).toUpperCase() + severity.slice(1)}
+          <EuiButton size="s" color={color} fill>
+            {severity}
           </EuiButton>
         );
       },
     },
+
     {
       field: 'status',
       name: 'Status',
       sortable: true,
+      render: (status: string) => {
+        const colors: Record<string, EuiButtonProps['color']> = {
+          open: 'primary',
+          active: 'warning',
+          investigating: 'accent',
+          resolved: 'success',
+          closed: 'text',
+          contained: 'text',
+        };
+        return (
+          <EuiButton size="s" color={colors[status]} fill>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </EuiButton>
+        );
+      },
     },
     {
       field: 'dateCreated',

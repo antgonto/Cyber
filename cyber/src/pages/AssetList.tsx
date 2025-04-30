@@ -226,28 +226,50 @@ const AssetList: React.FC = () => {
       name: 'Asset Type',
       sortable: true,
     },
+
     {
       field: 'criticality_level',
       name: 'Criticality',
       sortable: true,
-      render: (criticality_level: Asset['criticality_level']) => {
-        const colors = {
-          low: 'success' as 'success',
-          medium: 'primary' as 'primary',
-          high: 'warning' as 'warning',
-          critical: 'danger' as 'danger',
+      render: (criticality: string) => {
+        const key = criticality.toLowerCase();
+        const colors: Record<string, 'danger' | 'warning' | 'accent' | 'success'> = {
+          critical: 'danger',
+          high: 'warning',
+          medium: 'accent',
+          low: 'success',
         };
+        const color = colors[key] || 'accent';
         return (
-          <EuiButton
-            size="s"
-            color={colors[criticality_level]}
-            fill
-          >
-            {criticality_level.charAt(0).toUpperCase() + criticality_level.slice(1)}
+          <EuiButton size="s" color={color} fill>
+            {criticality}
           </EuiButton>
         );
       },
     },
+
+    // {
+    //   field: 'criticality_level',
+    //   name: 'Criticality',
+    //   sortable: true,
+    //   render: (criticality_level: Asset['criticality_level']) => {
+    //     const colors = {
+    //       low: 'success' as 'success',
+    //       medium: 'primary' as 'primary',
+    //       high: 'warning' as 'warning',
+    //       critical: 'danger' as 'danger',
+    //     };
+    //     return (
+    //       <EuiButton
+    //         size="s"
+    //         color={colors[criticality_level]}
+    //         fill
+    //       >
+    //         {criticality_level.charAt(0).toUpperCase() + criticality_level.slice(1)}
+    //       </EuiButton>
+    //     );
+    //   },
+    // },
     {
       field: 'location',
       name: 'Location',

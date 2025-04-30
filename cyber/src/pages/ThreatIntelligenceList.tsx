@@ -256,7 +256,7 @@ const ThreatIntelligenceList: React.FC = () => {
       field: 'threat_id',
       name: 'ID',
       sortable: true,
-      width: '80px'
+      width: '50px'
     },
     {
       field: 'threat_actor_name',
@@ -273,28 +273,28 @@ const ThreatIntelligenceList: React.FC = () => {
       name: 'Value',
       sortable: true
     },
+
     {
       field: 'confidence_level',
       name: 'Confidence',
       sortable: true,
-      render: (threat: string) => {
-        const colors = {
-          low: 'success',
-          medium: 'primary',
-          high: 'warning',
+      render: (confidence: string) => {
+        const key = confidence.toLowerCase();
+        const colors: Record<string, 'danger' | 'warning' | 'accent' | 'success'> = {
           critical: 'danger',
+          high: 'warning',
+          medium: 'accent',
+          low: 'success',
         };
+        const color = colors[key] || 'accent';
         return (
-          <EuiButton
-            size="s"
-            color={colors[threat]}
-            fill
-          >
-            {threat ? threat.charAt(0).toUpperCase() + threat.slice(1) : ''}
+          <EuiButton size="s" color={color} fill>
+            {confidence}
           </EuiButton>
         );
       },
     },
+
     {
       field: 'description',
       name: 'Description',

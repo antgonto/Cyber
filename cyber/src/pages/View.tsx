@@ -19,6 +19,7 @@ import {
   EuiLoadingSpinner,
 } from '@elastic/eui';
 import { dashboardService } from '../services/api';
+import {EuiButtonProps} from "@elastic/eui/src/components/button/button";
 
 interface IncidentDashboardItem {
   incident_id: number;
@@ -146,56 +147,65 @@ const IncidentDashboard: React.FC = () => {
     });
   };
 
-  const getSeverityColor = (
-    severity: string
-  ): 'danger' | 'warning' | 'accent' | 'success' => {
-    const colors: Record<string, 'danger' | 'warning' | 'accent' | 'success'> = {
-      critical: 'danger',
-      high: 'warning',
-      medium: 'accent',
-      low: 'success',
-    };
-    return colors[severity] || 'accent';
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      open: 'primary',
-      investigating: 'accent',
-      resolved: 'success',
-      closed: 'subdued',
-    };
-    return colors[status] || 'default';
-  };
-
   const columns = [
     { field: 'incident_id', name: 'ID', width: '80px' },
-    { field: 'incident_type', name: 'Type', width: '150px' },
+
+    { field: 'incident_type', name: 'Type' },
+
     {
       field: 'incident_status',
       name: 'Status',
-      width: '120px',
-      render: (status: string) => (
-        <EuiBadge color={getStatusColor(status)}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </EuiBadge>
-      ),
+      sortable: true,
+      render: (status: string) => {
+        const colors: Record<string, EuiButtonProps['color']> = {
+          open: 'primary',
+          active: 'warning',
+          investigating: 'accent',
+          resolved: 'success',
+          closed: 'text',
+          contained: 'text',
+        };
+        return (
+          <EuiButton size="s" color={colors[status]} fill>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </EuiButton>
+        );
+      },
     },
     {
       field: 'incident_severity',
       name: 'Severity',
-      width: '100px',
-      render: (severity: string) => (
-        <EuiBadge color={getSeverityColor(severity)}>
-          {severity.charAt(0).toUpperCase() + severity.slice(1)}
-        </EuiBadge>
+      sortable: true,
+      render: (severity: string) => {
+        const key = severity.toLowerCase();
+        const colors: Record<string, 'danger' | 'warning' | 'accent' | 'success'> = {
+          critical: 'danger',
+          high: 'warning',
+          medium: 'accent',
+          low: 'success',
+        };
+        const color = colors[key] || 'accent';
+        return (
+          <EuiButton size="s" color={color} fill>
+            {severity}
+          </EuiButton>
+        );
+      },
+    },
+
+    {
+      field: 'incident_description',
+      name: 'Description',
+      render: (description: string) => (
+        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {description}
+        </div>
       ),
     },
-    { field: 'incident_description', name: 'Description', truncateText: true },
     {
       field: 'assigned_username',
       name: 'Assigned To',
-      width: '150px',
+      width: '200px',
       render: (username: string, record: IncidentDashboardItem) =>
         username ? (
           <EuiToolTip content={`${record.assigned_email} (${record.assigned_user_role})`}>
@@ -263,6 +273,8 @@ const IncidentDashboard: React.FC = () => {
                   { value: 'investigating', text: 'Investigating' },
                   { value: 'resolved', text: 'Resolved' },
                   { value: 'closed', text: 'Closed' },
+                  { value: 'active', text: 'Active' },
+                  { value: 'contained', text: 'Contained' },
                 ]}
                 value={filters.incident_status || ''}
                 onChange={(e) =>
