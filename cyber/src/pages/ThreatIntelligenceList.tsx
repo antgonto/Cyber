@@ -277,12 +277,12 @@ const ThreatIntelligenceList: React.FC = () => {
       field: 'confidence_level',
       name: 'Confidence',
       sortable: true,
-      render: (threat: Threat['confidence_level']) => {
+      render: (threat: string) => {
         const colors = {
-          low: 'success' as 'success',
-          medium: 'primary' as 'primary',
-          high: 'warning' as 'warning',
-          critical: 'danger' as 'danger',
+          low: 'success',
+          medium: 'primary',
+          high: 'warning',
+          critical: 'danger',
         };
         return (
           <EuiButton
@@ -290,7 +290,7 @@ const ThreatIntelligenceList: React.FC = () => {
             color={colors[threat]}
             fill
           >
-            {threat.charAt(0).toUpperCase() + threat.slice(1)}
+            {threat ? threat.charAt(0).toUpperCase() + threat.slice(1) : ''}
           </EuiButton>
         );
       },

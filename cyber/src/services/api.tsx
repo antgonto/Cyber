@@ -1,6 +1,10 @@
-import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import axios, { AxiosRequestConfig } from 'axios';
+
+const raw = process.env.REACT_APP_API_URL?.trim();
+const API_URL = raw && raw !== '' ? raw : 'http://localhost:8000';
+
+
 
 const api = axios.create({
   baseURL: API_URL,
@@ -106,5 +110,9 @@ export const threatsService = {
         api.delete(`/app/v1/cyber/threat_intelligence/vulnerabilities/${threatId}/${vulnerabilityId}`),
 };
 
+// dashboard
+export const dashboardService = {
+  getDashboard: (filters) => api.get('/app/v1/cyber/dashboard/', { params: filters }),
+};
 
 export default api;

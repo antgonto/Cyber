@@ -18,6 +18,7 @@ import VulnerabilityList from "./pages/VulnerabilityList";
 import AlertsPage from "./pages/AlertsPage";
 import IncidentsPage from "./pages/IncidentsPage";
 import ThreatIntelligenceList from "./pages/ThreatIntelligenceList";
+import IncidentDashboard from "./pages/View";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                 <Route path="/alerts" element={<AlertsPage />} />
                 <Route path="/incidents" element={<IncidentsPage />} />
                 <Route path="/threat_intelligence" element={<ThreatIntelligenceList />} />
+                <Route path="/dashboard" element={<IncidentDashboard />} />
                 {/* Additional routes can be added here */}
               </Routes>
             </EuiFlexItem>

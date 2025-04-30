@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from typing import List, Optional
 import json
 
-from app.api.alerts.schemas import AlertSchema, AlertListSchema
+from app.api.alerts.schemas import AlertListSchema, AlertSchema
 
 router = Router(tags=["alerts"])
 
