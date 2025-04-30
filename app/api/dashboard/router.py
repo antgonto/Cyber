@@ -1,6 +1,6 @@
 from ninja import Router, Schema
 from ninja.pagination import paginate
-from typing import Optional
+from typing import Optional, List
 from django.db import connection
 from datetime import datetime
 
@@ -46,8 +46,8 @@ class IncidentDashboardFilterParams(Schema):
     max_resolution_time_hours: Optional[float] = None
 
 
-@router.get("/dashboard/", response=IncidentDashboardResponse)
-@paginate(IncidentDashboardResponse)
+@router.get("/", response=List[IncidentDashboardResponse])
+@paginate()
 def get_dashboard_incidents(request, filters: IncidentDashboardFilterParams):
     """Get incidents from the incident_management_dashboard view with optional filtering"""
 

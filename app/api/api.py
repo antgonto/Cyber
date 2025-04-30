@@ -1,4 +1,5 @@
 from ninja import NinjaAPI, Swagger
+import importlib.util
 
 api = NinjaAPI(
     title="Cyber API",
@@ -13,11 +14,29 @@ api = NinjaAPI(
     urls_namespace="api",
 )
 
-api.add_router("/users/", "app.api.users.router.router", tags=["users"])
-api.add_router("/assets/", "app.api.assets.router.router", tags=["assets"])
-api.add_router("/vulnerabilities/", "app.api.vulnerabilities.router.router", tags=["vulnerabilities"])
-api.add_router("/alerts/", "app.api.alerts.router.router", tags=["alerts"])
-api.add_router("/incidents/", "app.api.incidents.router.router", tags=["incidents"])
-api.add_router("/threat_intelligence/", "app.api.threat_intelligence.router.router", tags=["threat_intelligence"])
-api.add_router("/ddl/", "app.api.ddl.router.router", tags=["ddl"])
-api.add_router("/dashboard/", "app.api.dashboard.router.router", tags=["dashboard"])
+# Only add routers if they haven't been added already
+routers = [
+    ("/users/", "app.api.users.router.router", ["users"]),
+    ("/assets/", "app.api.assets.router.router", ["assets"]),
+    ("/vulnerabilities/", "app.api.vulnerabilities.router.router", ["vulnerabilities"]),
+    ("/alerts/", "app.api.alerts.router.router", ["alerts"]),
+    ("/incidents/", "app.api.incidents.router.router", ["incidents"]),
+    ("/threat_intelligence/", "app.api.threat_intelligence.router.router", ["threat_intelligence"]),
+    ("/ddl/", "app.api.ddl.router.router", ["ddl"]),
+    ("/dashboard/", "app.api.dashboard.router.router", ["dashboard"]),
+]
+
+# Track which routers have been added
+added_routers = set()
+
+for path, module_path, tags in routers:
+    # Check if router already added
+    if path not in added_routers:
+        try:
+            api.add_router(path, module_path, tags=tags)
+            added_routers.add(path)
+        except Exception as e:
+            # Skip if already attached
+            if "has already been attached" not in str(e):
+                # Re-raise if it's a different error
+                raise

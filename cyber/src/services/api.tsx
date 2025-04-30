@@ -112,7 +112,7 @@ export const threatsService = {
 
 // dashboard
 export const dashboardService = {
-  getDashboard: (filters) => api.get('/app/v1/cyber/dashboard/', { params: filters }),
+  getDashboard: (filters) => api.get('/app/v1/cyber/dashboard/', {params: filters}),
 };
 
 export default api;
