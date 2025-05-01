@@ -7,7 +7,7 @@ from psycopg import OperationalError
 
 from ninja import Router
 
-router = Router(tags=["ddl"])
+router = Router(tags=["settings"])
 
 class MessageResponse(Schema):
     message: str
@@ -56,7 +56,6 @@ def create_truncate_procedure(request) -> Dict:
     except OperationalError as e:
         return {"message": f"Database operation failed: {str(e)}", "success": False}
 
-
 @router.post("/execute_truncate_procedure/", response=MessageResponse)
 def execute_truncate_procedure(request) -> Dict:
     """Executes the database truncate procedure"""
@@ -78,61 +77,45 @@ def execute_truncate_procedure(request) -> Dict:
     except OperationalError as e:
         return {"message": f"Database operation failed: {str(e)}", "success": False}
 
-@router.post("/create_database_procedure/", response=MessageResponse)
-def create_database_procedure(request) -> Dict:
-    """Creates a stored procedure to create the cyber_db database"""
+@router.post("/create_database_no_procedure/", response=MessageResponse)
+def create_database(request) -> Dict:
+    """Creates the cyber_db database"""
     try:
         conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
+            dbname="postgres",
             user=settings.DATABASES['default']["USER"],
             password=settings.DATABASES['default']["PASSWORD"],
             host=settings.DATABASES['default']["HOST"],
             port=settings.DATABASES['default']["PORT"]
         )
-
-        create_db_sql = """
-        CREATE OR REPLACE PROCEDURE create_cybersecurity_db()
-        LANGUAGE plpgsql
-        AS $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'cyber_db') THEN
-                PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE cyber_db');
-            END IF;
-        END;
-        $$;
-        """
-
+        conn.autocommit = True
         with conn.cursor() as cur:
-            cur.execute(create_db_sql)
-        conn.commit()
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = 'cyber_db'")
+            if not cur.fetchone():
+                cur.execute("CREATE DATABASE cyber_db")
         conn.close()
-
-        return {"message": "Database creation procedure created successfully", "success": True}
-    except OperationalError as e:
-        return {"message": f"Database operation failed: {str(e)}", "success": False}
-
-
-@router.post("/execute_create_database_procedure/", response=MessageResponse)
-def execute_database_procedure(request) -> Dict:
-    """Executes the stored procedure to create the cyber_db database"""
-    try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
-
-        with conn.cursor() as cur:
-            cur.execute("CALL create_cybersecurity_db();")
-        conn.commit()
-        conn.close()
-
         return {"message": "Database created successfully", "success": True}
     except OperationalError as e:
         return {"message": f"Database operation failed: {str(e)}", "success": False}
 
+@router.post("/drop_database/", response=MessageResponse)
+def drop_database(request) -> Dict:
+    """Drops the cyber_db database directly without stored procedure"""
+    try:
+        conn = psycopg.connect(
+            dbname="postgres",
+            user=settings.DATABASES['default']["USER"],
+            password=settings.DATABASES['default']["PASSWORD"],
+            host=settings.DATABASES['default']["HOST"],
+            port=settings.DATABASES['default']["PORT"]
+        )
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("DROP DATABASE IF EXISTS cyber_db;")
+        conn.close()
+        return {"message": "Database dropped successfully", "success": True}
+    except OperationalError as e:
+        return {"message": f"Database operation failed: {str(e)}", "success": False}
 
 @router.post("/create_tables_procedure/", response=MessageResponse)
 def create_tables_procedure(request) -> Dict:
@@ -303,7 +286,6 @@ def create_tables_procedure(request) -> Dict:
     except OperationalError as e:
         return {"message": f"Database operation failed: {str(e)}", "success": False}
 
-
 @router.post("/execute_tables_procedure/", response=MessageResponse)
 def execute_tables_procedure(request) -> Dict:
     """Executes the stored procedure to create tables in the cyber_db database"""
@@ -324,3 +306,4 @@ def execute_tables_procedure(request) -> Dict:
         return {"message": "Database tables created successfully", "success": True}
     except OperationalError as e:
         return {"message": f"Database operation failed: {str(e)}", "success": False}
+

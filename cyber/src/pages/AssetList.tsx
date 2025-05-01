@@ -247,29 +247,6 @@ const AssetList: React.FC = () => {
         );
       },
     },
-
-    // {
-    //   field: 'criticality_level',
-    //   name: 'Criticality',
-    //   sortable: true,
-    //   render: (criticality_level: Asset['criticality_level']) => {
-    //     const colors = {
-    //       low: 'success' as 'success',
-    //       medium: 'primary' as 'primary',
-    //       high: 'warning' as 'warning',
-    //       critical: 'danger' as 'danger',
-    //     };
-    //     return (
-    //       <EuiButton
-    //         size="s"
-    //         color={colors[criticality_level]}
-    //         fill
-    //       >
-    //         {criticality_level.charAt(0).toUpperCase() + criticality_level.slice(1)}
-    //       </EuiButton>
-    //     );
-    //   },
-    // },
     {
       field: 'location',
       name: 'Location',

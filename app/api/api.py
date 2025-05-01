@@ -22,7 +22,7 @@ routers = [
     ("/alerts/", "app.api.alerts.router.router", ["alerts"]),
     ("/incidents/", "app.api.incidents.router.router", ["incidents"]),
     ("/threat_intelligence/", "app.api.threat_intelligence.router.router", ["threat_intelligence"]),
-    ("/ddl/", "app.api.ddl.router.router", ["ddl"]),
+    ("/settings/", "app.api.settings.router.router", ["settings"]),
     ("/dashboard/", "app.api.dashboard.router.router", ["dashboard"]),
 ]
 

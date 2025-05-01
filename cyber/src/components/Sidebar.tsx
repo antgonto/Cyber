@@ -14,26 +14,26 @@ const Sidebar = () => {
   const location = useLocation();
   const [isConfirmModalVisible, setIsConfirmModalVisible] = React.useState(false);
 
-  const handleConfirmDropDatabase = async () => {
-    try {
-      const response = await fetch('/settings/execute-drop-database-procedure/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-      setIsConfirmModalVisible(false);
-    } catch (error) {
-      alert('Failed to drop the database: ' + error);
-    }
-  };
+  // const handleConfirmDropDatabase = async () => {
+  //   try {
+  //     const response = await fetch('/settings/execute-drop-database-procedure/', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' }
+  //     });
+  //     const data = await response.json();
+  //     alert(data.message);
+  //     setIsConfirmModalVisible(false);
+  //   } catch (error) {
+  //     alert('Failed to drop the database: ' + error);
+  //   }
+  // };
 
   const showConfirmModal = () => setIsConfirmModalVisible(true);
   const closeConfirmModal = () => setIsConfirmModalVisible(false);
 
-  const handleCreateProcedure = async () => {
+  const handleCreateTruncateProcedure = async () => {
     try {
-      const response = await fetch('/settings/create-truncate-procedure/', {
+      const response = await fetch('/settings/create_truncate_procedure/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -44,9 +44,9 @@ const Sidebar = () => {
     }
   };
 
-  const handleExecuteProcedure = async () => {
+  const handleExecuteTruncateProcedure = async () => {
     try {
-      const response = await fetch('/settings/execute-truncate-procedure/', {
+      const response = await fetch('/settings/execute_truncate_procedure/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -57,9 +57,9 @@ const Sidebar = () => {
     }
   };
 
-  const handleCreateDatabaseProcedure = async () => {
+  const handleCreateDatabase = async () => {
     try {
-      const response = await fetch('/settings/create-database-procedure/', {
+      const response = await fetch('/settings/create_database/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -70,22 +70,22 @@ const Sidebar = () => {
     }
   };
 
-  const handleExecuteDatabaseProcedure = async () => {
+  const handleDropDatabase = async () => {
     try {
-      const response = await fetch('/settings/execute-database-procedure/', {
+      const response = await fetch('/settings/drop_database/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
       alert(data.message);
     } catch (error) {
-      alert('Failed to execute the database procedure: ' + error);
+      alert('Failed to drop the database: ' + error);
     }
   };
 
   const handleCreateTablesProcedure = async () => {
     try {
-      const response = await fetch('/settings/create-tables-procedure/', {
+      const response = await fetch('/settings/create_tables_procedure/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -98,7 +98,7 @@ const Sidebar = () => {
 
   const handleExecuteTablesProcedure = async () => {
     try {
-      const response = await fetch('/settings/execute-tables-procedure/', {
+      const response = await fetch('/settings/execute_tables_procedure/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -109,21 +109,17 @@ const Sidebar = () => {
     }
   };
 
-  const handleCreateDropDatabaseProcedure = async () => {
+  const handleCreateDashboardProcedure = async () => {
     try {
-      const response = await fetch('/settings/create-drop-database-procedure/', {
+      const response = await fetch('/settings/create_view/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
       alert(data.message);
     } catch (error) {
-      alert('Failed to create the drop database procedure: ' + error);
+      alert('Failed to create the dashboard procedure: ' + error);
     }
-  };
-
-  const handleExecuteDropDatabaseProcedure = () => {
-    showConfirmModal();
   };
 
   const sideNavItems = [
@@ -195,22 +191,22 @@ const Sidebar = () => {
             {
               id: '9-1',
               name: 'Create Truncate Procedure',
-              onClick: handleCreateProcedure
+              onClick: handleCreateTruncateProcedure
             },
             {
               id: '9-2',
               name: 'Execute Truncate Procedure',
-              onClick: handleExecuteProcedure
+              onClick: handleExecuteTruncateProcedure
             },
             {
               id: '9-3',
-              name: 'Create Database Procedure',
-              onClick: handleCreateDatabaseProcedure
+              name: 'Create Database',
+              onClick: handleCreateDatabase
             },
             {
               id: '9-4',
-              name: 'Execute Database Procedure',
-              onClick: handleExecuteDatabaseProcedure
+              name: 'Execute Drop Database',
+              onClick: handleDropDatabase
             },
             {
               id: '9-5',
@@ -224,14 +220,10 @@ const Sidebar = () => {
             },
             {
               id: '9-7',
-              name: 'Create Drop Database Procedure',
-              onClick: handleCreateDropDatabaseProcedure
-            },
-            {
-              id: '9-8',
-              name: 'Execute Drop Database Procedure',
-              onClick: handleExecuteDropDatabaseProcedure
+              name: 'Procedure to Create Dashboard',
+              onClick: handleCreateDashboardProcedure
             }
+
           ]
         }
       ]
@@ -282,7 +274,7 @@ const Sidebar = () => {
               </button>
               <button
                 style={{ padding: '5px 10px' }}
-                onClick={handleConfirmDropDatabase}
+                onClick={showConfirmModal}
               >
                 Confirm
               </button>
