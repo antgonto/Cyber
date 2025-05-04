@@ -9,117 +9,27 @@ import {
 } from '@elastic/eui';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isConfirmModalVisible, setIsConfirmModalVisible] = React.useState(false);
-
-  // const handleConfirmDropDatabase = async () => {
-  //   try {
-  //     const response = await fetch('/settings/execute-drop-database-procedure/', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' }
-  //     });
-  //     const data = await response.json();
-  //     alert(data.message);
-  //     setIsConfirmModalVisible(false);
-  //   } catch (error) {
-  //     alert('Failed to drop the database: ' + error);
-  //   }
-  // };
-
   const showConfirmModal = () => setIsConfirmModalVisible(true);
   const closeConfirmModal = () => setIsConfirmModalVisible(false);
+  const [isRiskOpen, setIsRiskOpen] = React.useState(false);
+  const handleRiskToggle = () => setIsRiskOpen(prev => !prev);
 
-  const handleCreateTruncateProcedure = async () => {
-    try {
-      const response = await fetch('/settings/create_truncate_procedure/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to create the procedure: ' + error);
-    }
+
+  const handleRiskDashboard = () => {
+      navigate('/risk_dashboard');
   };
 
-  const handleExecuteTruncateProcedure = async () => {
-    try {
-      const response = await fetch('/settings/execute_truncate_procedure/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to execute the procedure: ' + error);
-    }
+  const handleRiskScores = () => {
+      navigate('/risk_scores');
   };
 
-  const handleCreateDatabase = async () => {
-    try {
-      const response = await fetch('/settings/create_database/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to create the database procedure: ' + error);
-    }
-  };
-
-  const handleDropDatabase = async () => {
-    try {
-      const response = await fetch('/settings/drop_database/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to drop the database: ' + error);
-    }
-  };
-
-  const handleCreateTablesProcedure = async () => {
-    try {
-      const response = await fetch('/settings/create_tables_procedure/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to create the tables procedure: ' + error);
-    }
-  };
-
-  const handleExecuteTablesProcedure = async () => {
-    try {
-      const response = await fetch('/settings/execute_tables_procedure/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to execute the tables procedure: ' + error);
-    }
-  };
-
-  const handleCreateDashboardProcedure = async () => {
-    try {
-      const response = await fetch('/settings/create_view/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      alert(data.message);
-    } catch (error) {
-      alert('Failed to create the dashboard procedure: ' + error);
-    }
+  const handleRiskDetails = () => {
+      navigate('/risk_detail');
   };
 
   const sideNavItems = [
@@ -183,48 +93,49 @@ const Sidebar = () => {
           isSelected: location.pathname === '/dashboard',
           icon: <EuiIcon type="visLine" />
         },
+
+
         {
           id: '9',
-          name: 'Settings',
-          icon: <EuiIcon type="gear" />,
+          name: 'Risk',
+          onClick: handleRiskToggle,
+          isOpen: isRiskOpen,
+          isSelected:
+            location.pathname === '/risk_dashboard' ||
+            location.pathname === '/risk_scores' ||
+            location.pathname === '/risk_details',
+          icon: <EuiIcon type="gauge" />,
           items: [
             {
               id: '9-1',
-              name: 'Create Truncate Procedure',
-              onClick: handleCreateTruncateProcedure
+              name: 'Risk Dashboard',
+              onClick: handleRiskDashboard,
+              isSelected: location.pathname === '/risk_dashboard',
+              icon: <EuiIcon type="dashboardApp" size="s" />,
             },
             {
               id: '9-2',
-              name: 'Execute Truncate Procedure',
-              onClick: handleExecuteTruncateProcedure
+              name: 'Risk Scores',
+              onClick: handleRiskScores,
+              isSelected: location.pathname === '/risk_scores',
+              icon: <EuiIcon type="visBarVertical" size="s" />,
             },
             {
               id: '9-3',
-              name: 'Create Database',
-              onClick: handleCreateDatabase
+              name: 'Risk Details',
+              onClick: handleRiskDetails,
+              isSelected: location.pathname === '/risk_details',
+              icon: <EuiIcon type="visArea" size="s" />,
             },
-            {
-              id: '9-4',
-              name: 'Execute Drop Database',
-              onClick: handleDropDatabase
-            },
-            {
-              id: '9-5',
-              name: 'Create Tables Procedure',
-              onClick: handleCreateTablesProcedure
-            },
-            {
-              id: '9-6',
-              name: 'Execute Tables Procedure',
-              onClick: handleExecuteTablesProcedure
-            },
-            {
-              id: '9-7',
-              name: 'Procedure to Create Dashboard',
-              onClick: handleCreateDashboardProcedure
-            }
+          ],
+        },
 
-          ]
+        {
+          id: '10',
+          name: 'Settings',
+          onClick: () => navigate('/settings'),
+          isSelected: location.pathname === '/settings',
+          icon: <EuiIcon type="gear" />,
         }
       ]
     }

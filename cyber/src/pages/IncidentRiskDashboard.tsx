@@ -1,4 +1,3 @@
-// src/components/risk/IncidentRiskDashboard.tsx
 import React, { useState, useEffect } from 'react';
 import {
   EuiPage,
@@ -12,17 +11,13 @@ import {
   EuiLoadingSpinner,
   EuiCallOut,
   EuiEmptyPrompt,
-  EuiSelectOption
 } from '@elastic/eui';
-
-import axios from 'axios';
-import RiskScoreCard, { RiskScore } from './RiskScoreCard';
 import { useNavigate } from 'react-router-dom';
-
-
+import { riskService } from '../services/api';
+import RiskScoreCard, { RiskScore } from './RiskScoreCard';
 
 const IncidentRiskDashboard: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [riskScores, setRiskScores] = useState<RiskScore[]>([]);
   const [filteredScores, setFilteredScores] = useState<RiskScore[]>([]);
@@ -33,7 +28,7 @@ const IncidentRiskDashboard: React.FC = () => {
     const fetchRiskScores = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/risk/');
+        const response = await riskService.getRiskScores();
         setRiskScores(response.data);
         setFilteredScores(response.data);
         setError(null);
@@ -49,24 +44,14 @@ const IncidentRiskDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (severityFilter === 'all') {
-      setFilteredScores(riskScores);
-    } else {
-      setFilteredScores(riskScores.filter(score => score.severity === severityFilter));
-    }
+    setFilteredScores(
+      severityFilter === 'all'
+        ? riskScores
+        : riskScores.filter(s => s.severity === severityFilter)
+    );
   }, [severityFilter, riskScores]);
 
-  const handleCardClick = (incidentId: number) => {
-    navigate(`/incidents/${incidentId}`);
-  };
-
-  const severityOptions: EuiSelectOption[] = [
-    { value: 'all', text: 'All Severities' },
-    { value: 'critical', text: 'Critical' },
-    { value: 'high', text: 'High' },
-    { value: 'medium', text: 'Medium' },
-    { value: 'low', text: 'Low' },
-  ];
+  const handleCardClick = (id: number) => navigate(`/incidents/${id}`);
 
   if (loading) {
     return (
@@ -79,11 +64,7 @@ const IncidentRiskDashboard: React.FC = () => {
   }
 
   if (error) {
-    return (
-      <EuiCallOut title="Error" color="danger" iconType="alert">
-        {error}
-      </EuiCallOut>
-    );
+    return <EuiCallOut title="Error" color="danger" iconType="alert">{error}</EuiCallOut>;
   }
 
   return (
@@ -92,18 +73,22 @@ const IncidentRiskDashboard: React.FC = () => {
         <EuiPageHeader>
           <EuiFlexGroup justifyContent="spaceBetween" alignItems="center">
             <EuiFlexItem>
-              <EuiTitle size="l">
-                <h1>Incident Risk Dashboard</h1>
-              </EuiTitle>
+              <EuiTitle size="l"><h1>Incident Risk Dashboard</h1></EuiTitle>
             </EuiFlexItem>
             <EuiFlexItem grow={false}>
               <EuiFlexGroup alignItems="center">
                 <EuiFlexItem grow={false}>Filter by severity:</EuiFlexItem>
                 <EuiFlexItem grow={false}>
                   <EuiSelect
-                    options={severityOptions}
+                    options={[
+                      { value: 'all', text: 'All Severities' },
+                      { value: 'critical', text: 'Critical' },
+                      { value: 'high', text: 'High' },
+                      { value: 'medium', text: 'Medium' },
+                      { value: 'low', text: 'Low' },
+                    ]}
                     value={severityFilter}
-                    onChange={(e) => setSeverityFilter(e.target.value)}
+                    onChange={e => setSeverityFilter(e.target.value)}
                     aria-label="Filter by severity"
                   />
                 </EuiFlexItem>
@@ -122,11 +107,11 @@ const IncidentRiskDashboard: React.FC = () => {
           />
         ) : (
           <EuiFlexGroup wrap gutterSize="m">
-            {filteredScores.map(riskScore => (
-              <EuiFlexItem key={riskScore.incident_id} grow={1} style={{ minWidth: '350px', maxWidth: '500px' }}>
+            {filteredScores.map(score => (
+              <EuiFlexItem key={score.incident_id} style={{ minWidth: '350px', maxWidth: '500px' }}>
                 <RiskScoreCard
-                  riskScore={riskScore}
-                  onClick={() => handleCardClick(riskScore.incident_id)}
+                  riskScore={score}
+                  onClick={() => handleCardClick(score.incident_id)}
                 />
               </EuiFlexItem>
             ))}

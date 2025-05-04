@@ -1,5 +1,5 @@
 // src/components/risk/RiskScoreCard.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   EuiCard,
   EuiFlexGroup,
@@ -11,6 +11,12 @@ import {
   EuiSpacer,
   EuiToolTip,
   EuiIcon,
+  EuiPanel,
+  EuiDescriptionList,
+  EuiDescriptionListTitle,
+  EuiDescriptionListDescription,
+  EuiHealth,
+  EuiHorizontalRule
 } from '@elastic/eui';
 
 export interface RiskScore {
@@ -30,9 +36,9 @@ export interface RiskScore {
 
 interface RiskScoreCardProps {
   riskScore: RiskScore;
-  onClick: () => void;
 }
 
+// Helpers
 const getSeverityColor = (severity: string): string => {
   switch (severity.toLowerCase()) {
     case 'critical': return 'danger';
@@ -51,7 +57,22 @@ const getRiskScoreColor = (score: number): string => {
   return '#52c41a';
 };
 
-const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => {
+const getRecommendationIcon = (score: number): string => {
+  if (score >= 90) return 'alert';
+  if (score >= 75) return 'warning';
+  if (score >= 50) return 'bell';
+  return 'checkInCircleFilled';
+};
+
+const getRiskLabel = (score: number): string => {
+  if (score >= 90) return 'CRITICAL RISK';
+  if (score >= 75) return 'HIGH RISK';
+  if (score >= 50) return 'MODERATE RISK';
+  return 'LOW RISK';
+};
+
+const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore }) => {
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const {
     incident_id,
     incident_type,
@@ -61,36 +82,36 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
     recommended_action
   } = riskScore;
 
+  // Summary header
   const cardHeader = (
     <EuiFlexGroup justifyContent="spaceBetween" alignItems="center">
       <EuiFlexItem>
         <EuiFlexGroup alignItems="center">
           <EuiFlexItem grow={false}>
-            <EuiTitle size="s">
-              <h4>#{incident_id}: {incident_type}</h4>
-            </EuiTitle>
+            <EuiTitle size="s"><h4>#{incident_id}: {incident_type}</h4></EuiTitle>
           </EuiFlexItem>
           <EuiFlexItem grow={false}>
-            <EuiBadge color={getSeverityColor(severity)}>{severity.toUpperCase()}</EuiBadge>
+            <EuiBadge color={getSeverityColor(severity)}>
+              {severity.charAt(0).toUpperCase() + severity.slice(1)}
+            </EuiBadge>
           </EuiFlexItem>
         </EuiFlexGroup>
       </EuiFlexItem>
       <EuiFlexItem grow={false}>
         <EuiFlexGroup alignItems="center">
-          {risk_score >= 75 && <EuiIcon type="alert" color="danger" />}
+          <EuiIcon type={getRecommendationIcon(risk_score)} color={risk_score >= 75 ? 'danger' : 'subdued'} />
           <EuiText size="s"><strong>{recommended_action}</strong></EuiText>
         </EuiFlexGroup>
       </EuiFlexItem>
     </EuiFlexGroup>
   );
 
+  // Summary content
   const cardContent = (
     <>
       <EuiFlexGroup alignItems="center">
         <EuiFlexItem grow={false}>
-          <EuiTitle size="s">
-            <h3>{Math.round(risk_score)}</h3>
-          </EuiTitle>
+          <EuiTitle size="s"><h3>{Math.round(risk_score)}</h3></EuiTitle>
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiText color="subdued" size="s">Risk Score</EuiText>
@@ -111,16 +132,12 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
 
       <EuiSpacer size="m" />
 
-      <EuiTitle size="xs">
-        <h5>Risk Factors</h5>
-      </EuiTitle>
-
+      <EuiTitle size="s"><h5>Risk Factors</h5></EuiTitle>
       <EuiSpacer size="s" />
-
       <div className="risk-factors">
-        <EuiFlexGroup direction="column" gutterSize="s">
+        <EuiFlexGroup direction="column" gutterSize="s" alignItems="flexStart">
           <EuiFlexItem>
-            <EuiText size="xs">Assets</EuiText>
+            <EuiText size="s">– Assets</EuiText>
             <EuiProgress
               value={(risk_factors.asset_factor / 50) * 100}
               max={100}
@@ -128,9 +145,8 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
               color="#1890ff"
             />
           </EuiFlexItem>
-
           <EuiFlexItem>
-            <EuiText size="xs">Vulnerabilities</EuiText>
+            <EuiText size="s">– Vulnerabilities</EuiText>
             <EuiProgress
               value={(risk_factors.vulnerability_factor / 40) * 100}
               max={100}
@@ -138,9 +154,8 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
               color="#faad14"
             />
           </EuiFlexItem>
-
           <EuiFlexItem>
-            <EuiText size="xs">Threats</EuiText>
+            <EuiText size="s">– Threats</EuiText>
             <EuiProgress
               value={(risk_factors.threat_factor / 30) * 100}
               max={100}
@@ -148,9 +163,8 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
               color="#ff4d4f"
             />
           </EuiFlexItem>
-
           <EuiFlexItem>
-            <EuiText size="xs">Alerts</EuiText>
+            <EuiText size="s">– Alerts</EuiText>
             <EuiProgress
               value={(risk_factors.alert_factor / 30) * 100}
               max={100}
@@ -158,9 +172,8 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
               color="#fa8c16"
             />
           </EuiFlexItem>
-
           <EuiFlexItem>
-            <EuiText size="xs">Time Factor</EuiText>
+            <EuiText size="s">– Time Factor</EuiText>
             <EuiProgress
               value={(risk_factors.time_factor / 30) * 100}
               max={100}
@@ -173,17 +186,66 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
     </>
   );
 
-return (
+  return (
     <EuiCard
       title=""
       titleElement="span"
       description=""
-      onClick={onClick}
+      onClick={() => setIsExpanded(!isExpanded)}
       paddingSize="m"
       hasBorder
     >
       {cardHeader}
       {cardContent}
+
+      {isExpanded && (
+        <>
+          <EuiSpacer size="m" />
+          <EuiPanel paddingSize="l">
+            <EuiTitle><h2>{incident_type} Risk Assessment</h2></EuiTitle>
+            <EuiSpacer size="l" />
+            <EuiFlexGroup alignItems="center">
+              <EuiFlexItem grow={false}>
+                <EuiText><h3>{getRiskLabel(risk_score)}</h3></EuiText>
+              </EuiFlexItem>
+              <EuiFlexItem>
+                <EuiProgress
+                  valueText={`${Math.round(risk_score)}%`}
+                  value={risk_score}
+                  max={100}
+                  size="l"
+                  color={getRiskScoreColor(risk_score)}
+                />
+              </EuiFlexItem>
+            </EuiFlexGroup>
+            <EuiHorizontalRule />
+            <EuiDescriptionList textStyle="reverse" style={{ maxWidth: '800px' }}>
+              <EuiFlexGroup>
+                <EuiFlexItem>
+                  <EuiDescriptionListTitle>ID</EuiDescriptionListTitle>
+                  <EuiDescriptionListDescription>{incident_id}</EuiDescriptionListDescription>
+                </EuiFlexItem>
+                <EuiFlexItem>
+                  <EuiDescriptionListTitle>Type</EuiDescriptionListTitle>
+                  <EuiDescriptionListDescription>{incident_type}</EuiDescriptionListDescription>
+                </EuiFlexItem>
+                <EuiFlexItem>
+                  <EuiDescriptionListTitle>Severity</EuiDescriptionListTitle>
+                  <EuiDescriptionListDescription>
+                    <EuiHealth color={
+                      severity === 'critical' ? 'danger' :
+                      severity === 'high' ? 'warning' :
+                      severity === 'medium' ? 'primary' : 'success'
+                    }>
+                      {severity.toUpperCase()}
+                    </EuiHealth>
+                  </EuiDescriptionListDescription>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </EuiDescriptionList>
+          </EuiPanel>
+        </>
+      )}
     </EuiCard>
   );
 };

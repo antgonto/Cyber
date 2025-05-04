@@ -211,7 +211,7 @@ def create_incident(request, incident: IncidentSchema):
 
     return incident
 
-@router.get("/{incident_id}/", response=IncidentDetailSchema)
+@router.get("/{incident_id}", response=IncidentDetailSchema)
 def get_incident(request, incident_id: int):
     """Get incident by ID with related alerts and user details"""
     with connection.cursor() as cursor:
@@ -325,7 +325,7 @@ def get_incident(request, incident_id: int):
 
         return incident
 
-@router.put("/{incident_id}/", response=IncidentUpdateResponseSchema)
+@router.put("/{incident_id}", response=IncidentUpdateResponseSchema)
 def update_incident(request, incident_id: int, incident_data: IncidentSchema):
 
     # Check if incident exists
@@ -407,7 +407,7 @@ def update_incident(request, incident_id: int, incident_data: IncidentSchema):
     return {"message": "Incident updated successfully"}
 
 
-@router.delete("/{incident_id}/", response=IncidentDeleteResponseSchema)
+@router.delete("/{incident_id}", response=IncidentDeleteResponseSchema)
 def delete_incident(request, incident_id: int):
     """Delete an incident"""
     # Check if incident exists and delete it
@@ -431,7 +431,7 @@ def delete_incident(request, incident_id: int):
     return {"message": "Incident deleted successfully"}
 
 
-@router.get("/assets/{incident_id}/", response={200: list[IncidentAssetSchema], 400: ErrorSchema})
+@router.get("/assets/{incident_id}", response={200: list[IncidentAssetSchema], 400: ErrorSchema})
 def get_assets_from_incident(request, incident_id: int):
 
     assets = []
@@ -578,7 +578,7 @@ def update_asset_in_incident(request, incident_asset_data: IncidentAssetSchema,
 
     return incident_asset_data
 
-@router.delete("/assets/{incident_id}/{asset_id}/", response={200: dict, 404: ErrorSchema})
+@router.delete("/assets/{incident_id}/{asset_id}", response={200: dict, 404: ErrorSchema})
 def remove_asset_from_incident(request, incident_id: int, asset_id: int):
     # Check if association exists
     with connection.cursor() as cursor:
@@ -600,7 +600,7 @@ def remove_asset_from_incident(request, incident_id: int, asset_id: int):
 
     return {"success": True}
 
-@router.get("/threats/{incident_id}/", response=list[ThreatIncidentAssociationSchema])
+@router.get("/threats/{incident_id}", response=list[ThreatIncidentAssociationSchema])
 def get_threats_by_incident(request, incident_id: int):
     """Get all threat associations for an incident"""
     associations = []
@@ -756,7 +756,7 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
 
     return threat_incident_data
 
-@router.delete("/threats/{incident_id}/{threat_id}/")
+@router.delete("/threats/{incident_id}/{threat_id}")
 def remove_threat_from_incident(request, incident_id: int, threat_id: int):
     # Check if association exists
     with connection.cursor() as cursor:

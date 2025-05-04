@@ -23,6 +23,7 @@ import {
 } from '@elastic/eui';
 import axios from 'axios';
 import { RiskScore } from './RiskScoreCard';
+import {riskService} from "../services/api";
 
 const getRiskScoreColor = (score: number): string => {
   if (score >= 90) return '#ff4d4f';
@@ -50,25 +51,44 @@ const IncidentRiskDetail: React.FC = () => {
     recommended_action: string;
   } | null>(null);
 
-  useEffect(() => {
-    const fetchRiskScore = async () => {
-      if (!incidentId) return;
 
-      try {
-        setLoading(true);
-        const response = await axios.get(`/api/risk/${incidentId}/`);
-        setRiskScore(response.data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load risk score data. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const fetchRiskScore = async () => {
+    // setLoading(true);
+    try {
+        if (!incidentId) {
+          throw new Error('Incident ID is required');
+        }
+        const id = parseInt(incidentId, 10);
+        const response = await riskService.getRiskScoreById(id);
+        console.log("Details: ", response.data);
+        const responseData = response.data.map((risk: RiskScore) => ({
+          incident_type: risk.incident_type,
+          severity: risk.severity,
+          risk_score: risk.risk_score,
+          risk_factors: {
+            asset_factor: risk.risk_factors.asset_factor,
+            vulnerability_factor: risk.risk_factors.vulnerability_factor,
+            threat_factor: risk.risk_factors.threat_factor,
+            alert_factor: risk.risk_factors.alert_factor,
+            time_factor: risk.risk_factors.time_factor
+          },
+          recommended_action: risk.recommended_action
+        }));
+
+        setRiskScore(responseData);
+    } catch (err) {
+      setError('Failed to load risk score data. Please try again later.');
+      console.error(err);
+    }finally {
+      // setLoading(false);
+    }
+  }
+
+    useEffect(() => {
+      if (incidentId) {
+        fetchRiskScore();
       }
-    };
-
-    fetchRiskScore();
-  }, [incidentId]);
+    }, []);
 
   const handleTriggerEscalation = async () => {
     if (!incidentId) return;
@@ -83,17 +103,17 @@ const IncidentRiskDetail: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <EuiFlexGroup alignItems="center" justifyContent="center" style={{ height: '100vh' }}>
-        <EuiFlexItem grow={false}>
-          <EuiLoadingSpinner size="xl" />
-          <EuiSpacer size="s" />
-          <EuiText>Loading risk assessment...</EuiText>
-        </EuiFlexItem>
-      </EuiFlexGroup>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <EuiFlexGroup alignItems="center" justifyContent="center" style={{ height: '100vh' }}>
+  //       <EuiFlexItem grow={false}>
+  //         <EuiLoadingSpinner size="xl" />
+  //         <EuiSpacer size="s" />
+  //         <EuiText>Loading risk assessment...</EuiText>
+  //       </EuiFlexItem>
+  //     </EuiFlexGroup>
+  //   );
+  // }
 
   if (error || !riskScore) {
     return (

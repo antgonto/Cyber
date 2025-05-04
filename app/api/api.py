@@ -24,6 +24,7 @@ routers = [
     ("/threat_intelligence/", "app.api.threat_intelligence.router.router", ["threat_intelligence"]),
     ("/settings/", "app.api.settings.router.router", ["settings"]),
     ("/dashboard/", "app.api.dashboard.router.router", ["dashboard"]),
+    ("/risk/", "app.api.risk.router.router", ["risk"]),
 ]
 
 # Track which routers have been added

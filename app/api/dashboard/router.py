@@ -51,7 +51,7 @@ class SimpleMessage(Schema):
     success: bool
     detail: str
 
-@router.post("/create_view", response=SimpleMessage)
+@router.post("/create_view/", response=SimpleMessage)
 def create_view(request):
     """
     Creates or replaces the `refresh_incident_management_dashboard_view` stored procedure
@@ -140,17 +140,6 @@ def create_view(request):
     with connection.cursor() as cursor:
         cursor.execute(view)
     return {"success": True, "detail": "View created or replaced successfully"}
-
-
-@router.post("/refresh-view", response=SimpleMessage)
-def refresh_dashboard_view(request):
-    """
-    Triggers the `create_stored_procedure_dashboard` stored procedure,
-    which (re)creates the `incident_management_dashboard` view.
-    """
-    with connection.cursor() as cursor:
-        cursor.execute("CALL create_stored_procedure_dashboard()")
-    return {"success": True, "detail": "create_stored_procedure_dashboard created"}
 
 
 @router.get("/", response=PaginatedIncidentDashboard)

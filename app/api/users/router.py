@@ -234,7 +234,7 @@ def create_activity_log(request, payload: UserActivityLogCreateSchema):
             INSERT INTO user_activity_logs 
             (user_id, activity_type, timestamp, description)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, user_id, activity_type, timestamp, description
+            RETURNING log_id, user_id, activity_type, timestamp, description
             """,
             [
                 payload.user_id,
@@ -263,7 +263,7 @@ def create_activity_log(request, payload: UserActivityLogCreateSchema):
 @router.get("/activity-logs/", response=List[UserActivityLogFullSchema])
 def list_activity_logs(request, filters: UserActivityLogFilterSchema = None):
     with connection.cursor() as cursor:
-        query = "SELECT id, user_id, activity_type, timestamp, description FROM user_activity_logs"
+        query = "SELECT log_id, user_id, activity_type, timestamp, description FROM user_activity_logs"
         conditions = []
         params = []
 
@@ -309,13 +309,13 @@ def list_activity_logs(request, filters: UserActivityLogFilterSchema = None):
         return results
 
 
-@router.get("/activity-logs/{log_id}/", response=UserActivityLogFullSchema)
+@router.get("/activity-logs/{log_id}", response=UserActivityLogFullSchema)
 def get_activity_log(request, log_id: int):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, user_id, activity_type, timestamp, description
-            FROM user_activity_logs WHERE id = %s
+            SELECT log_id, user_id, activity_type, timestamp, description
+            FROM user_activity_logs WHERE log_id = %s
             """,
             [log_id]
         )
@@ -335,11 +335,11 @@ def get_activity_log(request, log_id: int):
         }
 
 
-@router.put("/activity-logs/{log_id}/", response=UserActivityLogFullSchema)
+@router.put("/activity-logs/{log_id}", response=UserActivityLogFullSchema)
 def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSchema):
     with connection.cursor() as cursor:
         # Check if activity log exists
-        cursor.execute("SELECT id FROM user_activity_logs WHERE id = %s", [log_id])
+        cursor.execute("SELECT log_id FROM user_activity_logs WHERE log_id = %s", [log_id])
         if not cursor.fetchone():
             return HttpResponse(status=404, content=json.dumps({"detail": "Activity log not found"}))
 
@@ -356,8 +356,8 @@ def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSche
             # No fields to update, return current log
             cursor.execute(
                 """
-                SELECT id, user_id, activity_type, timestamp, description
-                FROM user_activity_logs WHERE id = %s
+                SELECT log_id, user_id, activity_type, timestamp, description
+                FROM user_activity_logs WHERE  log_id = %s
                 """,
                 [log_id]
             )
@@ -400,12 +400,12 @@ def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSche
         }
 
 
-@router.delete("/activity-logs/{log_id}/", response={204: None})
+@router.delete("/activity-logs/{log_id}", response={204: None})
 def delete_activity_log(request, log_id: int):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id FROM user_activity_logs WHERE id = %s", [log_id])
+        cursor.execute("SELECT log_id FROM user_activity_logs WHERE log_id = %s", [log_id])
         if not cursor.fetchone():
             return HttpResponse(status=404, content=json.dumps({"detail": "Activity log not found"}))
 
-        cursor.execute("DELETE FROM user_activity_logs WHERE id = %s", [log_id])
+        cursor.execute("DELETE FROM user_activity_logs WHERE log_id = %s", [log_id])
         return 204, None

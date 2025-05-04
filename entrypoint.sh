@@ -1,6 +1,9 @@
 #!/bin/bash
 cd /code
 
+# Ensure the database exists before Django starts
+python create_db.py
+
 # Install or upgrade django-cors-headers
 pip install django-cors-headers --upgrade
 
