@@ -164,7 +164,7 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
     <EuiCard
       title={cardHeader}
       paddingSize="m"
-      onClick={onClick}
+      onClick={toggleExpand}
     >
       <EuiButtonIcon
         iconType={isExpanded ? 'arrowUp' : 'arrowDown'}
@@ -174,7 +174,6 @@ const RiskScoreCard: React.FC<RiskScoreCardProps> = ({ riskScore, onClick }) => 
         }}
         aria-label="Toggle details"
       />
-
       {isExpanded && <EuiPanel paddingSize="m">{cardContent}</EuiPanel>}
     </EuiCard>
   );
