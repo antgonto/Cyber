@@ -27,11 +27,6 @@ const Sidebar = () => {
   const handleRiskScores = () => {
       navigate('/risk_scores');
   };
-
-  const handleRiskDetails = () => {
-      navigate('/risk_detail');
-  };
-
   const sideNavItems = [
     {
       name: 'Security Platform',
@@ -119,13 +114,6 @@ const Sidebar = () => {
               onClick: handleRiskScores,
               isSelected: location.pathname === '/risk_scores',
               icon: <EuiIcon type="visBarVertical" size="s" />,
-            },
-            {
-              id: '9-3',
-              name: 'Risk Details',
-              onClick: handleRiskDetails,
-              isSelected: location.pathname === '/risk_details',
-              icon: <EuiIcon type="visArea" size="s" />,
             },
           ],
         },

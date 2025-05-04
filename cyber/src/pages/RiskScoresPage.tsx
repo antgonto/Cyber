@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   EuiBasicTable,
-  EuiBadge,
   EuiPageHeader,
   EuiSpacer,
   EuiPanel, EuiButton,

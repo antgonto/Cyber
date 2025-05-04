@@ -22,9 +22,6 @@ import IncidentDashboard from "./pages/View";
 import SettingsMenu from "./pages/SettingsMenu";
 import RiskScoresPage from "./pages/RiskScoresPage";
 import IncidentRiskDashboard from "./pages/IncidentRiskDashboard";
-import RiskScoreCard from "./pages/RiskScoreCard";
-import IncidentRiskDetail from "./pages/IncidentRiskDetail";
-
 
 function App() {
   return (
@@ -48,7 +45,6 @@ function App() {
                 <Route path="/dashboard" element={<IncidentDashboard />} />
                 <Route path="/risk_dashboard" element={<IncidentRiskDashboard />} />
                 <Route path="/risk_scores" element={<RiskScoresPage />} />
-                <Route path="/risk_detail" element={<IncidentRiskDetail />} />
                 <Route path="/settings" element={<SettingsMenu />} />
                 {/* Additional routes can be added here */}
               </Routes>
