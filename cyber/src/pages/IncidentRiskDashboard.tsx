@@ -51,7 +51,7 @@ const IncidentRiskDashboard: React.FC = () => {
     );
   }, [severityFilter, riskScores]);
 
-  const handleCardClick = (id: number) => navigate(`/incidents/${id}`);
+  const handleCardClick = (id: number) => navigate(`/app/v1/cyber/incidents/${id}`);
 
   if (loading) {
     return (

@@ -177,7 +177,100 @@ def create_and_execute_tables(request) -> Dict:
         return {"message": f"Database operation failed: {str(e)}", "success": False}
 
 
+@router.post("/create_threat_update_trigger/", response=MessageResponse)
+def create_threat_update_trigger(request) -> Dict:
+    """
+    Creates or replaces the trigger function and trigger that stamps last_updated on api_threatintelligence.
+    """
+    try:
+        conn = psycopg.connect(
+            dbname=settings.DATABASES['default']["NAME"],
+            user=settings.DATABASES['default']["USER"],
+            password=settings.DATABASES['default']["PASSWORD"],
+            host=settings.DATABASES['default']["HOST"],
+            port=settings.DATABASES['default']["PORT"]
+        )
+        sql = """
+        CREATE OR REPLACE FUNCTION trg_threat_update_timestamp()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          NEW.last_updated := NOW();
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
 
+        DROP TRIGGER IF EXISTS tr_threat_timestamp ON api_threatintelligence;
+        CREATE TRIGGER tr_threat_timestamp
+          BEFORE INSERT OR UPDATE
+          ON api_threatintelligence
+          FOR EACH ROW
+          EXECUTE FUNCTION trg_threat_update_timestamp();
+        """
+        with conn.cursor() as cur:
+            cur.execute(sql)
+        conn.commit()
+        conn.close()
+        return {"message": "Threat update trigger created successfully", "success": True}
+    except OperationalError as e:
+        return {"message": f"Database operation failed: {str(e)}", "success": False}
+
+@router.post("/create_assoc_touch_triggers/", response=MessageResponse)
+def create_assoc_touch_triggers(request) -> Dict:
+    """Creates or replaces triggers that bump last_updated on threat associations."""
+    try:
+        conn = psycopg.connect(
+            dbname=settings.DATABASES['default']["NAME"],
+            user=settings.DATABASES['default']["USER"],
+            password=settings.DATABASES['default']["PASSWORD"],
+            host=settings.DATABASES['default']["HOST"],
+            port=settings.DATABASES['default']["PORT"],
+        )
+        sql = """
+        CREATE OR REPLACE FUNCTION trg_assoc_touch_threat()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          tid INTEGER;
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            tid := OLD.threat_id;
+          ELSE
+            tid := NEW.threat_id;
+          END IF;
+          UPDATE api_threatintelligence
+            SET last_updated = NOW()
+            WHERE threat_id = tid;
+          RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        DROP TRIGGER IF EXISTS tr_asset_assoc_touch ON threat_asset_association;
+        CREATE TRIGGER tr_asset_assoc_touch
+          AFTER INSERT OR UPDATE OR DELETE
+          ON threat_asset_association
+          FOR EACH ROW
+          EXECUTE FUNCTION trg_assoc_touch_threat();
+
+        DROP TRIGGER IF EXISTS tr_vuln_assoc_touch ON threat_vulnerability_association;
+        CREATE TRIGGER tr_vuln_assoc_touch
+          AFTER INSERT OR UPDATE OR DELETE
+          ON threat_vulnerability_association
+          FOR EACH ROW
+          EXECUTE FUNCTION trg_assoc_touch_threat();
+
+        DROP TRIGGER IF EXISTS tr_incident_assoc_touch ON threat_incident_association;
+        CREATE TRIGGER tr_incident_assoc_touch
+          AFTER INSERT OR UPDATE OR DELETE
+          ON threat_incident_association
+          FOR EACH ROW
+          EXECUTE FUNCTION trg_assoc_touch_threat();
+        """
+        with conn.cursor() as cur:
+            cur.execute(sql)
+        conn.commit()
+        conn.close()
+        return {"message": "Association triggers created successfully", "success": True}
+    except OperationalError as e:
+        return {"message": f"Database operation failed: {str(e)}", "success": False}
 
 @router.post("/create_fake_data_procedure/", response=MessageResponse)
 def create_seed_procedure(request):

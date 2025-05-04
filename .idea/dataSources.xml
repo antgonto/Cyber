@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="cyber" uuid="e8589f1c-7f89-4ac3-aa05-948977d60e9a">
+    <data-source source="LOCAL" name="ciber" uuid="76cea1f3-39b8-4c14-88cc-2383d9c7e935">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
-      <jdbc-url>jdbc:postgresql://0.0.0.0:5432/cyber</jdbc-url>
+      <jdbc-url>jdbc:postgresql://127.0.0.1:5432/cyber</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>

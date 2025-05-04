@@ -18,14 +18,6 @@ const api = axios.create({
 
 const actions = [
     {
-      id: 'create-db',
-      title: 'Create Database',
-      url: '/app/v1/cyber/settings/create_database/',
-      successMsg: 'Database created.',
-      errorMsg: 'Failed to create the database: ',
-      iconType: 'database',  // changed to a valid Elastic UI icon
-    },
-    {
       id: 'create-tables',
       title: 'Create Tables',
       url: '/app/v1/cyber/settings/create_tables/',
@@ -45,9 +37,25 @@ const actions = [
       id: 'execute-fill-tables',
       title: 'Execute Fill Tables Procedure',
       url: '/app/v1/cyber/settings/execute_fake_data_procedure/',
-      successMsg: 'Execute procedure to fill the tables.',
+      successMsg: 'Executed procedure to fill the tables.',
       errorMsg: 'Failed to execute the procedure to fill the tables: ',
       iconType: 'playFilled',
+    },
+    {
+      id: 'stamps-last-updated',
+      title: 'Create Trigger to Change Last_Updated in Threat Intelligence',
+      url: '/app/v1/cyber/settings/create_threat_update_trigger/',
+      successMsg: 'Created trigger to update last_updated date.',
+      errorMsg: 'Failed to create trigger to update last_updated date: ',
+      iconType: 'calendar',
+    },
+    {
+      id: 'stamps-last-updated',
+      title: 'Create Trigger to Change Last_Updated - Associations',
+      url: '/app/v1/cyber/settings/create_assoc_touch_triggers/',
+      successMsg: 'Created trigger that initiates updates to last_updated date from threat associations.',
+      errorMsg: 'Failed to create trigger that initiates updates to last_updated date from threat associations: ',
+      iconType: 'bolt',
     },
     {
       id: 'create-dashboard',
@@ -56,6 +64,14 @@ const actions = [
       successMsg: 'Dashboard View created successfully.',
       errorMsg: 'Failed to create the dashboard view: ',
       iconType: 'dashboardApp',
+    },
+    {
+      id: 'create-risk-dashboard',
+      title: 'Create Function to Calculate Risk Score',
+      url: '/app/v1/cyber/risk/create_risk_score_function/',
+      successMsg: 'Function to calculate risk score was created successfully.',
+      errorMsg: 'Failed to create the function to calculate risk score: ',
+      iconType: 'consoleApp',
     },
     {
       id: 'create-truncate',

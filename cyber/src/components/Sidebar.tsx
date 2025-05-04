@@ -16,17 +16,7 @@ const Sidebar = () => {
   const [isConfirmModalVisible, setIsConfirmModalVisible] = React.useState(false);
   const showConfirmModal = () => setIsConfirmModalVisible(true);
   const closeConfirmModal = () => setIsConfirmModalVisible(false);
-  const [isRiskOpen, setIsRiskOpen] = React.useState(false);
-  const handleRiskToggle = () => setIsRiskOpen(prev => !prev);
 
-
-  const handleRiskDashboard = () => {
-      navigate('/risk_dashboard');
-  };
-
-  const handleRiskScores = () => {
-      navigate('/risk_scores');
-  };
   const sideNavItems = [
     {
       name: 'Security Platform',
@@ -88,36 +78,13 @@ const Sidebar = () => {
           isSelected: location.pathname === '/dashboard',
           icon: <EuiIcon type="visLine" />
         },
-
-
         {
           id: '9',
           name: 'Risk',
-          onClick: handleRiskToggle,
-          isOpen: isRiskOpen,
-          isSelected:
-            location.pathname === '/risk_dashboard' ||
-            location.pathname === '/risk_scores' ||
-            location.pathname === '/risk_details',
-          icon: <EuiIcon type="gauge" />,
-          items: [
-            {
-              id: '9-1',
-              name: 'Risk Dashboard',
-              onClick: handleRiskDashboard,
-              isSelected: location.pathname === '/risk_dashboard',
-              icon: <EuiIcon type="dashboardApp" size="s" />,
-            },
-            {
-              id: '9-2',
-              name: 'Risk Scores',
-              onClick: handleRiskScores,
-              isSelected: location.pathname === '/risk_scores',
-              icon: <EuiIcon type="visBarVertical" size="s" />,
-            },
-          ],
+          onClick: () => navigate('/risk_dashboard'),
+          isSelected: location.pathname === '/risk_dashboard',
+          icon: <EuiIcon type="dashboardApp" />,
         },
-
         {
           id: '10',
           name: 'Settings',

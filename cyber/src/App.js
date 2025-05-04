@@ -20,7 +20,6 @@ import IncidentsPage from "./pages/IncidentsPage";
 import ThreatIntelligenceList from "./pages/ThreatIntelligenceList";
 import IncidentDashboard from "./pages/View";
 import SettingsMenu from "./pages/SettingsMenu";
-import RiskScoresPage from "./pages/RiskScoresPage";
 import IncidentRiskDashboard from "./pages/IncidentRiskDashboard";
 
 function App() {
@@ -44,7 +43,6 @@ function App() {
                 <Route path="/threat_intelligence" element={<ThreatIntelligenceList />} />
                 <Route path="/dashboard" element={<IncidentDashboard />} />
                 <Route path="/risk_dashboard" element={<IncidentRiskDashboard />} />
-                <Route path="/risk_scores" element={<RiskScoresPage />} />
                 <Route path="/settings" element={<SettingsMenu />} />
                 {/* Additional routes can be added here */}
               </Routes>

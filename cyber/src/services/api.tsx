@@ -122,6 +122,7 @@ export const dashboardService = {
 };
 
 export const riskService = {
+  createRiskFunction: (incident_id: number) => api.get(`/app/v1/cyber/risk/create_risk_score_function/`),
   getRiskScores: () => api.get('/app/v1/cyber/risk/risk_scores/'),
   getOpenRiskScores: () => api.get('/app/v1/cyber/risk/risk_scores/open/'),
   getRiskScoreById: (incident_id: number) => api.get(`/app/v1/cyber/risk/risk_score/${incident_id}`),
