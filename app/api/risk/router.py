@@ -1,14 +1,12 @@
 from typing import Optional, Dict, List
 
-import psycopg
 from django.http import JsonResponse
-from django.db import connection
-import json
 
 from ninja import Router, Schema
 
-from django.conf import settings
 from psycopg import OperationalError
+
+from app.api.common.utils import get_connection
 
 router = Router(tags=["risk"])
 
@@ -36,7 +34,7 @@ def get_risk_scores(request):
         create_result = create_risk_score_function(request)
         if not create_result.get("success", False):
             return JsonResponse({"error": "Could not create risk score function"}, status=500)
-
+        connection = get_connection()
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT i.incident_id, i.incident_type, i.severity, 
@@ -68,20 +66,13 @@ def get_risk_scores(request):
 def create_risk_score_function(request) -> Dict:
     """Creates the calculate_incident_risk_score function in PostgreSQL"""
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
 
         # First check if function already exists
         check_sql = """
         SELECT COUNT(*) FROM pg_proc 
         WHERE proname = 'calculate_incident_risk_score'
         """
-
+        conn = get_connection()
         with conn.cursor() as cur:
             cur.execute(check_sql)
             function_exists = cur.fetchone()[0] > 0
@@ -273,14 +264,7 @@ def calculate_risk_score(request, incident_id: int):
         if not create_result.get("success", False):
             return JsonResponse({"error": "Could not create risk score function"}, status=500)
 
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
-
+        conn = get_connection()
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM public.calculate_incident_risk_score(%s)", (incident_id,))
             result = cursor.fetchone()
@@ -319,13 +303,7 @@ def list_open_incident_risk_scores(request):
         if not create_result.get("success", False):
             return JsonResponse({"error": "Could not create risk score function"}, status=500)
 
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
+        conn = get_connection()
 
         with conn.cursor() as cursor:
             cursor.execute("""

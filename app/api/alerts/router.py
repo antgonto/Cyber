@@ -1,10 +1,11 @@
 from ninja import Router
-from django.db import connection
+
 from django.http import HttpResponse
 from typing import Optional
 import json
 
 from app.api.alerts.schemas import AlertListSchema, AlertSchema
+from app.api.common.utils import get_connection
 
 router = Router(tags=["alerts"])
 
@@ -39,6 +40,7 @@ def list_alerts(
     status: Optional[str] = None,
     source: Optional[str] = None
 ):
+    connection = get_connection()
     print("Listing alerts with filters:", severity, status, source)
     """List all alerts with optional filtering"""
     with connection.cursor() as cursor:
@@ -86,6 +88,7 @@ def list_alerts(
 def create_alert(request, alert: AlertSchema):
     # print("alert: ", alert)
     """Create a new alert"""
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Validate incident_id if provided
         if alert.incident_id:
@@ -122,6 +125,7 @@ def create_alert(request, alert: AlertSchema):
 @router.get("/{alert_id}", response=AlertSchema)
 def get_alert(request, alert_id: int):
     print(alert_id)
+    connection = get_connection()
     """Get alert by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -150,6 +154,7 @@ def get_alert(request, alert_id: int):
 
 @router.put("/{alert_id}", response=AlertSchema)
 def update_alert(request, alert_id: int, alert: AlertSchema):
+    connection = get_connection()
     """Update an existing alert"""
     with connection.cursor() as cursor:
         # Check if alert exists
@@ -246,6 +251,7 @@ def update_alert(request, alert_id: int, alert: AlertSchema):
 
 @router.delete("/{alert_id}", response=dict)
 def delete_alert(request, alert_id: int):
+    connection = get_connection()
     """Delete an alert"""
     with connection.cursor() as cursor:
         # Check if alert exists
@@ -259,6 +265,7 @@ def delete_alert(request, alert_id: int):
 
 @router.post("/{alert_id}/assign-incident/{incident_id}")
 def assign_incident_to_alert(request, alert_id: int, incident_id: int):
+    connection = get_connection()
     """Assign an incident to an alert"""
     with connection.cursor() as cursor:
         # Check if alert exists
@@ -305,6 +312,7 @@ def assign_incident_to_alert(request, alert_id: int, incident_id: int):
 
 @router.post("/{alert_id}/remove-incident/")
 def remove_incident_from_alert(request, alert_id: int):
+    connection = get_connection()
     """Remove incident assignment from an alert"""
     with connection.cursor() as cursor:
         # Check if alert exists

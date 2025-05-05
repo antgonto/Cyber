@@ -3,8 +3,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from django.db import connection
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse
 from ninja import Router
 from .schemas import (
     IncidentSchema,
@@ -14,6 +13,7 @@ from .schemas import (
     IncidentDeleteResponseSchema,
     ThreatIncidentAssociationSchema
 )
+from ..common.utils import get_connection
 from ..schemas import ErrorSchema
 
 router = Router(tags=["incidents"])
@@ -28,7 +28,7 @@ def list_detailed_incidents(
 ):
     """List all incidents with detailed information and optional filtering"""
     results = []
-
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Build WHERE clause for filters
         where_clauses = []
@@ -157,6 +157,7 @@ def list_detailed_incidents(
     return results
 @router.post("/", response=IncidentSchema)
 def create_incident(request, incident: IncidentSchema):
+    connection = get_connection()
     """Create a new incident"""
     with connection.cursor() as cursor:
         # Validate assigned_to user if provided
@@ -213,6 +214,7 @@ def create_incident(request, incident: IncidentSchema):
 
 @router.get("/{incident_id}", response=IncidentDetailSchema)
 def get_incident(request, incident_id: int):
+    connection = get_connection()
     """Get incident by ID with related alerts and user details"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -327,7 +329,7 @@ def get_incident(request, incident_id: int):
 
 @router.put("/{incident_id}", response=IncidentUpdateResponseSchema)
 def update_incident(request, incident_id: int, incident_data: IncidentSchema):
-
+    connection = get_connection()
     # Check if incident exists
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s", [incident_id])
@@ -410,6 +412,7 @@ def update_incident(request, incident_id: int, incident_data: IncidentSchema):
 @router.delete("/{incident_id}", response=IncidentDeleteResponseSchema)
 def delete_incident(request, incident_id: int):
     """Delete an incident"""
+    connection = get_connection()
     # Check if incident exists and delete it
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s", [incident_id])
@@ -433,9 +436,8 @@ def delete_incident(request, incident_id: int):
 
 @router.get("/assets/{incident_id}", response={200: list[IncidentAssetSchema], 400: ErrorSchema})
 def get_assets_from_incident(request, incident_id: int):
-
     assets = []
-
+    connection = get_connection()
     # Verify incident exists
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s", [incident_id])
@@ -466,6 +468,7 @@ def get_assets_from_incident(request, incident_id: int):
 
 @router.post("/assets/", response={201: IncidentAssetSchema, 400: ErrorSchema})
 def add_asset_to_incident(request, incident_asset_data: IncidentAssetSchema):
+    connection = get_connection()
     # Verify incident exists
     with connection.cursor() as cursor:
         # Check if association already exists
@@ -513,6 +516,7 @@ def update_asset_in_incident(request, incident_asset_data: IncidentAssetSchema,
                           original_incident_id: Optional[int] = None,
                           original_asset_id: Optional[int] = None):
 
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Verify the original association exists
         cursor.execute(
@@ -580,6 +584,7 @@ def update_asset_in_incident(request, incident_asset_data: IncidentAssetSchema,
 
 @router.delete("/assets/{incident_id}/{asset_id}", response={200: dict, 404: ErrorSchema})
 def remove_asset_from_incident(request, incident_id: int, asset_id: int):
+    connection = get_connection()
     # Check if association exists
     with connection.cursor() as cursor:
         cursor.execute(
@@ -604,6 +609,7 @@ def remove_asset_from_incident(request, incident_id: int, asset_id: int):
 def get_threats_by_incident(request, incident_id: int):
     """Get all threat associations for an incident"""
     associations = []
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s", [incident_id])
         if not cursor.fetchone():
@@ -628,6 +634,7 @@ def get_threats_by_incident(request, incident_id: int):
 
 @router.post("/threats/", response=ThreatIncidentAssociationSchema)
 def add_threat_to_incident(request, threat_incident_data: ThreatIncidentAssociationSchema):
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute("SELECT incident_id FROM api_incident WHERE incident_id = %s",
                       [threat_incident_data.incident_id])
@@ -672,6 +679,7 @@ def add_threat_to_incident(request, threat_incident_data: ThreatIncidentAssociat
 def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociationSchema,
                            original_threat_id: Optional[int] = None,
                            original_incident_id: Optional[int] = None):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if we're updating an existing association
         if original_threat_id and original_incident_id:
@@ -758,6 +766,7 @@ def update_incident_threat(request, threat_incident_data: ThreatIncidentAssociat
 
 @router.delete("/threats/{incident_id}/{threat_id}")
 def remove_threat_from_incident(request, incident_id: int, threat_id: int):
+    connection = get_connection()
     # Check if association exists
     with connection.cursor() as cursor:
         cursor.execute(

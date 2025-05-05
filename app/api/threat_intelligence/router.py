@@ -1,16 +1,15 @@
 import json
 from typing import List, Optional
 
-from django.db import connection, transaction
+from django.db import transaction
 from django.http import HttpResponse
 
 from ninja import Router
 
-from app.api.schemas import ErrorSchema, SuccessSchema
-from app.api.incidents.schemas import ThreatIncidentAssociationSchema
+from app.api.common.utils import get_connection
+from app.api.schemas import ErrorSchema
 from app.api.threat_intelligence.schemas import (
     ThreatIntelligenceSchema,
-    ThreatIntelligenceListSchema,
     ThreatIntelligenceCreateResponseSchema,
     ThreatIntelligenceUpdateResponseSchema,
     ThreatIntelligenceDeleteResponseSchema,
@@ -35,6 +34,7 @@ def list_threats(
         confidence_level: str = None,
         related_cve: str = None
 ):
+    connection = get_connection()
     with connection.cursor() as cursor:
         query = """
             SELECT
@@ -129,6 +129,7 @@ def create_threat(request, payload: ThreatIntelligenceSchema):
             return 400, {"message": "Confidence level is required"}
 
         with transaction.atomic():
+            connection = get_connection()
             with connection.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO api_threatintelligence
@@ -184,6 +185,7 @@ def create_threat(request, payload: ThreatIntelligenceSchema):
 
 @router.get("/{threat_id}", response={200: ThreatIntelligenceSchema, 404: ErrorSchema})
 def get_threat(request, threat_id: int):
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -245,7 +247,7 @@ def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
             return 400, {"message": "Indicator value is required"}
         if not payload.confidence_level:
             return 400, {"message": "Confidence level is required"}
-
+        connection = get_connection()
         with transaction.atomic():
             with connection.cursor() as cursor:
                 # Check if threat exists
@@ -303,6 +305,7 @@ def update_threat(request, threat_id: int, payload: ThreatIntelligenceSchema):
 
 @router.delete("/{threat_id}", response={200: ThreatIntelligenceDeleteResponseSchema, 404: ErrorSchema})
 def delete_threat(request, threat_id: int):
+    connection = get_connection()
     with transaction.atomic():
         with connection.cursor() as cursor:
             # Check if threat exists
@@ -326,6 +329,7 @@ def delete_threat(request, threat_id: int):
 @router.get("/assets/{threat_id}", response={200: List[ThreatAssetAssociationResponseSchema], 400: ErrorSchema})
 def get_threat_assets(request, threat_id: int):
     assets = []
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute("SELECT threat_id FROM api_threatintelligence WHERE threat_id = %s", [threat_id])
         if not cursor.fetchone():
@@ -358,6 +362,7 @@ def get_threat_assets(request, threat_id: int):
 # Create a new association
 @router.post("/assets/", response={201: ThreatAssetAssociationResponseSchema, 400: ErrorSchema})
 def add_asset_to_threat(request, threat_asset_data: ThreatAssetAssociationSchema):
+    connection = get_connection()
     with transaction.atomic():
         with connection.cursor() as cursor:
             # Check if association already exists
@@ -403,7 +408,7 @@ def add_asset_to_threat(request, threat_asset_data: ThreatAssetAssociationSchema
 def update_threat_asset(request, threat_asset_data: ThreatAssetAssociationSchema,
                         original_threat_id: Optional[int] = None,
                         original_asset_id: Optional[int] = None):
-
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if association exists
         cursor.execute("SELECT threat_id FROM threat_asset_association WHERE threat_id = %s AND asset_id = %s",
@@ -469,6 +474,7 @@ def update_threat_asset(request, threat_asset_data: ThreatAssetAssociationSchema
 # Delete association
 @router.delete("/assets/{threat_id}/{asset_id}", response={200: dict, 404: ErrorSchema})
 def remove_asset_from_threat(request, threat_id: int, asset_id: int):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if association exists
         cursor.execute("SELECT threat_id FROM threat_asset_association WHERE threat_id = %s AND asset_id = %s",
@@ -493,6 +499,7 @@ def remove_asset_from_threat(request, threat_id: int, asset_id: int):
 @router.get("/vulnerabilities/{threat_id}", response=list[ThreatVulnerabilityAssociationSchema])
 def get_vulnerabilities_from_threat(request, threat_id: int):
     vulnerabilities = []
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute("SELECT threat_id FROM api_threatintelligence WHERE threat_id = %s", [threat_id])
         if not cursor.fetchone():
@@ -517,6 +524,7 @@ def get_vulnerabilities_from_threat(request, threat_id: int):
 
 @router.post("/vulnerabilities/", response=ThreatVulnerabilityAssociationSchema)
 def add_vulnerability_to_threat(request, threat_vuln_data: ThreatVulnerabilityAssociationSchema):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Verify that both threat and vulnerability exist
         cursor.execute("SELECT threat_id FROM api_threatintelligence WHERE threat_id = %s",
@@ -561,6 +569,7 @@ def add_vulnerability_to_threat(request, threat_vuln_data: ThreatVulnerabilityAs
 def update_vulnerability_in_threat(request, threat_vuln_data: ThreatVulnerabilityAssociationSchema,
                                             original_threat_id: Optional[int] = None,
                                             original_vulnerability_id: Optional[int] = None):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if we're updating an existing association
         if original_threat_id and original_vulnerability_id:
@@ -648,6 +657,7 @@ def update_vulnerability_in_threat(request, threat_vuln_data: ThreatVulnerabilit
 
 @router.delete("/vulnerabilities/{threat_id}/{vulnerability_id}")
 def remove_vulnerability_from_threat(request, threat_id: int, vulnerability_id: int):
+    connection = get_connection()
     # Check if association exists
     with connection.cursor() as cursor:
         cursor.execute(

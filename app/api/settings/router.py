@@ -1,11 +1,12 @@
-import psycopg
-from ninja import Schema
-from django.conf import settings
-from typing import Dict
 
+from ninja import Schema
+from typing import Dict
 from psycopg import OperationalError
 
 from ninja import Router
+
+from app import settings
+from app.api.common.utils import get_connection
 
 router = Router(tags=["settings"])
 
@@ -17,138 +18,154 @@ class MessageResponse(Schema):
 def create_and_execute_tables(request) -> Dict:
     """Creates all tables in the cyber_db database directly without using a stored procedure"""
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
+        conn = get_connection()
 
         create_tables_sql = """
-        -- Create User table
+        -- --------------------------------------------------------------------------------
+        -- 1) Users
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS api_user (
-            user_id SERIAL PRIMARY KEY,
-            username VARCHAR(150) UNIQUE NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            role VARCHAR(50) NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            is_active BOOLEAN DEFAULT TRUE,
-            last_login TIMESTAMP,
-            date_joined TIMESTAMP
+          user_id     SERIAL          PRIMARY KEY,
+          username    VARCHAR(150)    NOT NULL UNIQUE,
+          email       VARCHAR(255)    NOT NULL UNIQUE,
+          role        VARCHAR(50)     NOT NULL,
+          password    VARCHAR(255)    NOT NULL,
+          last_login  TIMESTAMP       NULL,
+          is_active   BOOLEAN         NOT NULL,
+          date_joined TIMESTAMP       NOT NULL
         );
-
-        -- Create Asset table
+        
+        -- --------------------------------------------------------------------------------
+        -- 2) Assets
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS api_asset (
-            asset_id SERIAL PRIMARY KEY,
-            asset_name VARCHAR(150) UNIQUE NOT NULL,
-            asset_type VARCHAR(50) NOT NULL,
-            location VARCHAR(50) NOT NULL,
-            owner VARCHAR(100) NOT NULL,
-            criticality_level VARCHAR(50) NOT NULL
+          asset_id          SERIAL       PRIMARY KEY,
+          asset_name        VARCHAR(255) NOT NULL,
+          asset_type        VARCHAR(100) NOT NULL,
+          location          VARCHAR(255),
+          owner             INT          REFERENCES api_user(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
+          criticality_level VARCHAR(50)
         );
-
-        -- Create Vulnerability table
+        
+        -- --------------------------------------------------------------------------------
+        -- 3) Vulnerabilities
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS api_vulnerability (
-            vulnerability_id SERIAL PRIMARY KEY,
-            title VARCHAR(255) UNIQUE NOT NULL,
-            description TEXT NOT NULL,
-            severity VARCHAR(50) NOT NULL,
-            cve_reference VARCHAR(100) NOT NULL,
-            remediation_steps TEXT NOT NULL,
-            discovery_date TIMESTAMP,
-            patch_available BOOLEAN DEFAULT TRUE
+          vulnerability_id  SERIAL       PRIMARY KEY,
+          title             VARCHAR(255) NOT NULL,
+          description       TEXT,
+          severity          VARCHAR(50),
+          cve_reference     VARCHAR(100),
+          remediation_steps TEXT,
+          discovery_date    TIMESTAMP,
+          patch_available   BOOLEAN
         );
-
-        -- Create Incident table
-        CREATE TABLE IF NOT EXISTS api_incident (
-            incident_id SERIAL PRIMARY KEY,
-            incident_type VARCHAR(100) NOT NULL,
-            description TEXT NOT NULL,
-            severity VARCHAR(50) NOT NULL,
-            status VARCHAR(50) NOT NULL,
-            reported_date TIMESTAMP,
-            resolved_date TIMESTAMP,
-            assigned_to INTEGER REFERENCES api_user(user_id) ON DELETE SET NULL
-        );
-
-        -- Create ThreatIntelligence table
-        CREATE TABLE IF NOT EXISTS api_threatintelligence (
-            threat_id SERIAL PRIMARY KEY,
-            threat_actor_name VARCHAR(100) NOT NULL,
-            indicator_type VARCHAR(50) NOT NULL,
-            indicator_value VARCHAR(255) NOT NULL,
-            confidence_level VARCHAR(50) NOT NULL,
-            description TEXT NOT NULL,
-            related_cve VARCHAR(100),
-            date_identified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Create Alert table
-        CREATE TABLE IF NOT EXISTS api_alert (
-            alert_id SERIAL PRIMARY KEY,
-            source VARCHAR(255) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            alert_type VARCHAR(100) NOT NULL,
-            alert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            severity VARCHAR(50) NOT NULL,
-            status VARCHAR(50) NOT NULL,
-            incident_id INTEGER REFERENCES api_incident(incident_id) ON DELETE SET NULL
-        );
-
-        -- Create relationship tables
+        
+        -- --------------------------------------------------------------------------------
+        -- 4) Asset–Vulnerability link
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS asset_vulnerabilities (
-            id SERIAL PRIMARY KEY,
-            asset_id INTEGER REFERENCES api_asset(asset_id) ON DELETE CASCADE,
-            vulnerability_id INTEGER REFERENCES api_vulnerability(vulnerability_id) ON DELETE CASCADE,
-            date_discovered DATE DEFAULT CURRENT_DATE,
-            status VARCHAR(50) NOT NULL,
-            CONSTRAINT unique_asset_vulnerability UNIQUE (asset_id, vulnerability_id)
+          asset_id         INT           REFERENCES api_asset(asset_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          vulnerability_id INT           REFERENCES api_vulnerability(vulnerability_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          date_discovered  DATE,
+          status           VARCHAR(50),
+          PRIMARY KEY (asset_id, vulnerability_id)
         );
-
+        
+        -- --------------------------------------------------------------------------------
+        -- 5) Incidents
+        -- --------------------------------------------------------------------------------
+        CREATE TABLE IF NOT EXISTS api_incident (
+          incident_id     SERIAL       PRIMARY KEY,
+          incident_type   VARCHAR(100),
+          description     TEXT,
+          severity        VARCHAR(50),
+          status          VARCHAR(50),
+          assigned_to_id  INT          REFERENCES api_user(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
+          reported_date   TIMESTAMP,
+          resolved_date   TIMESTAMP
+        );
+        
+        -- --------------------------------------------------------------------------------
+        -- 6) Incident–Asset link
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS incident_assets (
-            id SERIAL PRIMARY KEY,
-            incident_id INTEGER REFERENCES api_incident(incident_id) ON DELETE CASCADE,
-            asset_id INTEGER REFERENCES api_asset(asset_id) ON DELETE CASCADE,
-            impact_level VARCHAR(100) NOT NULL,
-            CONSTRAINT unique_incident_asset UNIQUE (incident_id, asset_id)
+          incident_id  INT          REFERENCES api_incident(incident_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          asset_id     INT          REFERENCES api_asset(asset_id)   ON DELETE CASCADE ON UPDATE CASCADE,
+          impact_level VARCHAR(50),
+          PRIMARY KEY (incident_id, asset_id)
         );
-
+        
+        -- --------------------------------------------------------------------------------
+        -- 7) Alerts
+        -- --------------------------------------------------------------------------------
+        CREATE TABLE IF NOT EXISTS api_alert (
+          alert_id    SERIAL       PRIMARY KEY,
+          source      VARCHAR(100),
+          name        VARCHAR(255),
+          alert_type  VARCHAR(100),
+          alert_time  TIMESTAMP,
+          severity    VARCHAR(50),
+          status      VARCHAR(50),
+          incident_id INT           REFERENCES api_incident(incident_id) ON DELETE SET NULL ON UPDATE CASCADE
+        );
+        
+        -- --------------------------------------------------------------------------------
+        -- 8) Threat Intelligence
+        -- --------------------------------------------------------------------------------
+        CREATE TABLE IF NOT EXISTS api_threatintelligence (
+          threat_id          SERIAL       PRIMARY KEY,
+          threat_actor_name  VARCHAR(255),
+          indicator_type     VARCHAR(50),
+          indicator_value    VARCHAR(255),
+          confidence_level   VARCHAR(50),
+          description        TEXT,
+          related_cve        VARCHAR(100),
+          date_identified    DATE,
+          last_updated       DATE
+        );
+        
+        -- --------------------------------------------------------------------------------
+        -- 9) Threat–Asset link
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS threat_asset_association (
-            id SERIAL PRIMARY KEY,
-            threat_id INTEGER REFERENCES api_threatintelligence(threat_id) ON DELETE CASCADE,
-            asset_id INTEGER REFERENCES api_asset(asset_id) ON DELETE CASCADE,
-            notes TEXT,
-            CONSTRAINT unique_threat_asset UNIQUE (threat_id, asset_id)
+          threat_id INT REFERENCES api_threatintelligence(threat_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          asset_id  INT REFERENCES api_asset(asset_id)               ON DELETE CASCADE ON UPDATE CASCADE,
+          notes     TEXT,
+          PRIMARY KEY (threat_id, asset_id)
         );
-
+        
+        -- --------------------------------------------------------------------------------
+        -- 10) Threat–Vulnerability link
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS threat_vulnerability_association (
-            id SERIAL PRIMARY KEY,
-            threat_id INTEGER REFERENCES api_threatintelligence(threat_id) ON DELETE CASCADE,
-            vulnerability_id INTEGER REFERENCES api_vulnerability(vulnerability_id) ON DELETE CASCADE,
-            notes TEXT,
-            CONSTRAINT unique_threat_vulnerability UNIQUE (threat_id, vulnerability_id)
+          threat_id        INT REFERENCES api_threatintelligence(threat_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          vulnerability_id INT REFERENCES api_vulnerability(vulnerability_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          notes            TEXT,
+          PRIMARY KEY (threat_id, vulnerability_id)
         );
-
+        
+        -- --------------------------------------------------------------------------------
+        -- 11) Threat–Incident link
+        -- --------------------------------------------------------------------------------
         CREATE TABLE IF NOT EXISTS threat_incident_association (
-            id SERIAL PRIMARY KEY,
-            threat_id INTEGER REFERENCES api_threatintelligence(threat_id) ON DELETE CASCADE,
-            incident_id INTEGER REFERENCES api_incident(incident_id) ON DELETE CASCADE,
-            notes TEXT,
-            CONSTRAINT unique_threat_incident UNIQUE (threat_id, incident_id)
+          threat_id   INT REFERENCES api_threatintelligence(threat_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          incident_id INT REFERENCES api_incident(incident_id)           ON DELETE CASCADE ON UPDATE CASCADE,
+          notes       TEXT,
+          PRIMARY KEY (threat_id, incident_id)
+        );
+        
+        -- --------------------------------------------------------------------------------
+        -- 12) User Activity Logs
+        -- --------------------------------------------------------------------------------
+        CREATE TABLE IF NOT EXISTS user_activity_logs (
+          log_id        SERIAL       PRIMARY KEY,
+          user_id       INT          REFERENCES api_user(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+          activity_type VARCHAR(100),
+          timestamp     TIMESTAMP,
+          description   TEXT
         );
 
-        CREATE TABLE IF NOT EXISTS user_activity_logs (
-            log_id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES api_user(user_id) ON DELETE CASCADE,
-            activity_type VARCHAR(100) NOT NULL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            description TEXT,
-            ip_address INET,
-            resource_type VARCHAR(100),
-            resource_id INTEGER
-        );
 
         -- Create indexes
         CREATE INDEX IF NOT EXISTS idx_alert_incident_id ON api_alert(incident_id);
@@ -183,13 +200,7 @@ def create_threat_update_trigger(request) -> Dict:
     Creates or replaces the trigger function and trigger that stamps last_updated on api_threatintelligence.
     """
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
+        conn = get_connection()
         sql = """
         CREATE OR REPLACE FUNCTION trg_threat_update_timestamp()
         RETURNS TRIGGER AS $$
@@ -218,13 +229,7 @@ def create_threat_update_trigger(request) -> Dict:
 def create_assoc_touch_triggers(request) -> Dict:
     """Creates or replaces triggers that bump last_updated on threat associations."""
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"],
-        )
+        conn = get_connection()
         sql = """
         CREATE OR REPLACE FUNCTION trg_assoc_touch_threat()
         RETURNS TRIGGER AS $$
@@ -279,13 +284,7 @@ def create_seed_procedure(request):
     which inserts all of your initial seed rows.
     """
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
+        conn = get_connection()
 
         create_sql = """
         CREATE OR REPLACE PROCEDURE insert_seed_data()
@@ -440,13 +439,7 @@ def execute_seed_procedure(request):
     Calls the `insert_seed_data()` procedure to populate all of your tables.
     """
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
+        conn = get_connection()
         with conn.cursor() as cursor:
             cursor.execute("CALL insert_seed_data()")
         conn.commit()
@@ -459,14 +452,7 @@ def execute_seed_procedure(request):
 def create_truncate_procedure(request) -> Dict:
     """Creates the database truncate procedure in PostgreSQL"""
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
-
+        conn = get_connection()
         create_sql = """
         CREATE OR REPLACE PROCEDURE truncate_cybersecurity_db()
         LANGUAGE plpgsql
@@ -503,14 +489,7 @@ def create_truncate_procedure(request) -> Dict:
 def execute_truncate_procedure(request) -> Dict:
     """Executes the database truncate procedure"""
     try:
-        conn = psycopg.connect(
-            dbname=settings.DATABASES['default']["NAME"],
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
-
+        conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("CALL truncate_cybersecurity_db();")
         conn.commit()
@@ -525,14 +504,7 @@ def drop_database(request) -> Dict:
     """Drops the cyber_db database directly without stored procedure"""
     try:
         database = settings.DATABASES['default']["NAME"]
-        # Connect to postgres default database instead of the one we want to drop
-        conn = psycopg.connect(
-            dbname="postgres",  # Connect to default postgres database instead
-            user=settings.DATABASES['default']["USER"],
-            password=settings.DATABASES['default']["PASSWORD"],
-            host=settings.DATABASES['default']["HOST"],
-            port=settings.DATABASES['default']["PORT"]
-        )
+        conn = get_connection()
         conn.autocommit = True
         with conn.cursor() as cur:
             # Close existing connections to the database

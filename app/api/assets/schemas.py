@@ -8,7 +8,7 @@ class AssetSchema(Schema):
     asset_name: str = Field(..., description="Name of the asset")
     asset_type: str = Field(..., description="Type or category of the asset")
     location: Optional[str] = Field(None, description="Physical or logical location of the asset")
-    owner: Optional[str] = Field(None, description="ID of the owner/responsible person for this asset")
+    owner: Optional[int] = Field(None, description="ID of the owner/responsible person for this asset")
     criticality_level: str = Field(..., description="Level of criticality for the asset")
 
     class Config:
@@ -18,14 +18,14 @@ class AssetCreateSchema(Schema):
     asset_name: str = Field(..., description="Name of the asset")
     asset_type: str = Field(..., description="Type or category of the asset")
     location: Optional[str] = Field(..., description="Physical or logical location of the asset")
-    owner: Optional[str] = Field(..., description="ID of the owner/responsible person for this asset")
+    owner: Optional[int] = Field(..., description="ID of the owner/responsible person for this asset")
     criticality_level: str = Field(..., description="Level of criticality for the asset")
 
 class AssetUpdateSchema(Schema):
     asset_name: Optional[str] = Field(None, description="Name of the asset")
     asset_type: Optional[str] = Field(None, description="Type or category of the asset")
     location: Optional[str] = Field(None, description="Physical or logical location of the asset")
-    owner: Optional[str] = Field(None, description="ID of the owner/responsible person for this asset")
+    owner: Optional[int] = Field(None, description="ID of the owner/responsible person for this asset")
     criticality_level: Optional[str] = Field(None, description="Level of criticality for the asset")
 
     class Config:

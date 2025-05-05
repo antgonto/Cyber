@@ -19,8 +19,12 @@ try:
         with conn.cursor() as cur:
             cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
             exists = cur.fetchone()
-            if not exists:
-                cur.execute(f'CREATE DATABASE "{db_name}"')
-                print(f"Database {db_name} created.")
+            if exists:
+                print(f"Database {db_name} already exists and will be dropped to recreate it.")
+                cur.execute(f'DROP DATABASE IF EXISTS "{db_name}"')
+
+            # Create the database
+            cur.execute(f'CREATE DATABASE "{db_name}"')
+            print(f"Database {db_name} created.")
 except Exception as e:
     print(f"Database check/create failed: {e}")

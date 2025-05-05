@@ -1,22 +1,22 @@
 from datetime import timezone, datetime
 
 from django.contrib.auth.hashers import make_password
-from django.shortcuts import get_object_or_404
 from ninja import Router
-from django.db import connection
+
 from django.http import HttpResponse
 from typing import List
 import json
 
-from .models import User, UserActivityLog
 from .schemas import UserSchema, UserCreateSchema, UserUpdateSchema, UserActivityLogFullSchema, \
     UserActivityLogCreateSchema, UserActivityLogFilterSchema, UserActivityLogUpdateSchema
+from ..common.utils import get_connection
 
 router = Router(tags=["users"])
 
 @router.get("/", response=List[UserSchema])
 def list_users(request):
     print("list_users")
+    connection = get_connection()
     """Get all users"""
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT user_id, username, email, role, last_login, is_active, date_joined FROM api_user")
@@ -37,6 +37,7 @@ def list_users(request):
 
 @router.post("/", response=UserSchema)
 def create_user(request, user_data: UserCreateSchema):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if username or email already exists
         cursor.execute(
@@ -86,6 +87,7 @@ def create_user(request, user_data: UserCreateSchema):
 
 @router.get("/{user_id}", response=UserSchema)
 def get_user(request, user_id: int):
+    connection = get_connection()
     """Get user by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -110,6 +112,7 @@ def get_user(request, user_id: int):
 
 @router.put("/{user_id}", response=UserSchema)
 def update_user(request, user_id: int, user_data: UserUpdateSchema):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if user exists
         cursor.execute("SELECT user_id FROM api_user WHERE user_id = %s", [user_id])
@@ -187,6 +190,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
 
 @router.delete("/{user_id}")
 def delete_user(request, user_id: int):
+    connection = get_connection()
     """Delete a user"""
     with connection.cursor() as cursor:
         # Check if user exists
@@ -201,6 +205,7 @@ def delete_user(request, user_id: int):
 
 @router.post("/activity/log", response=dict)
 def log_user_activity(request, activity: dict):
+    connection = get_connection()
     """Log user activity"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -222,6 +227,7 @@ def log_user_activity(request, activity: dict):
 
 @router.post("/activity-logs/", response=UserActivityLogFullSchema)
 def create_activity_log(request, payload: UserActivityLogCreateSchema):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if user exists
         cursor.execute("SELECT user_id FROM api_user WHERE user_id = %s", [payload.user_id])
@@ -262,6 +268,7 @@ def create_activity_log(request, payload: UserActivityLogCreateSchema):
 
 @router.get("/activity-logs/", response=List[UserActivityLogFullSchema])
 def list_activity_logs(request, filters: UserActivityLogFilterSchema = None):
+    connection = get_connection()
     with connection.cursor() as cursor:
         query = "SELECT log_id, user_id, activity_type, timestamp, description FROM user_activity_logs"
         conditions = []
@@ -311,6 +318,7 @@ def list_activity_logs(request, filters: UserActivityLogFilterSchema = None):
 
 @router.get("/activity-logs/{log_id}", response=UserActivityLogFullSchema)
 def get_activity_log(request, log_id: int):
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -337,6 +345,7 @@ def get_activity_log(request, log_id: int):
 
 @router.put("/activity-logs/{log_id}", response=UserActivityLogFullSchema)
 def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSchema):
+    connection = get_connection()
     with connection.cursor() as cursor:
         # Check if activity log exists
         cursor.execute("SELECT log_id FROM user_activity_logs WHERE log_id = %s", [log_id])
@@ -402,6 +411,7 @@ def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSche
 
 @router.delete("/activity-logs/{log_id}", response={204: None})
 def delete_activity_log(request, log_id: int):
+    connection = get_connection()
     with connection.cursor() as cursor:
         cursor.execute("SELECT log_id FROM user_activity_logs WHERE log_id = %s", [log_id])
         if not cursor.fetchone():

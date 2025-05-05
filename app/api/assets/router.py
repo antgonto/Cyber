@@ -1,15 +1,17 @@
 from ninja import Router
-from django.db import connection
+
 from django.http import HttpResponse
 from typing import List
 import json
 
 from app.api.assets.schemas import AssetSchema, AssetCreateSchema, AssetUpdateSchema
+from app.api.common.utils import get_connection
 
 router = Router(tags=["assets"])
 
 @router.get("/", response=List[AssetSchema])
 def list_assets(request):
+    connection = get_connection()
     """Get all assets"""
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT asset_id, asset_name, asset_type, location, owner, criticality_level FROM api_asset")
@@ -30,6 +32,7 @@ def list_assets(request):
 @router.post("/", response=AssetSchema)
 def create_asset(request, asset_data: AssetCreateSchema):
     print(asset_data)
+    connection = get_connection()
     """Create a new asset"""
     with connection.cursor() as cursor:
         # Check if asset_name already exists
@@ -72,6 +75,7 @@ def create_asset(request, asset_data: AssetCreateSchema):
 
 @router.get("/{asset_id}", response=AssetSchema)
 def get_asset(request, asset_id: int):
+    connection = get_connection()
     """Get asset by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -92,10 +96,9 @@ def get_asset(request, asset_id: int):
         }
         return asset
 
-
-
 @router.put("/{asset_id}", response=AssetSchema)
 def update_asset(request, asset_id: int, asset_data: AssetUpdateSchema):
+    connection = get_connection()
     """Update an existing asset"""
     with connection.cursor() as cursor:
         # Check if asset exists
@@ -175,6 +178,7 @@ def update_asset(request, asset_id: int, asset_data: AssetUpdateSchema):
 
 @router.delete("/{asset_id}")
 def delete_asset(request, asset_id: int):
+    connection = get_connection()
     """Delete a asset"""
     with connection.cursor() as cursor:
         # Check if asset exists

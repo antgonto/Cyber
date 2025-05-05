@@ -1,9 +1,9 @@
 from ninja import Router
-from django.db import connection
 from django.http import HttpResponse
 from typing import List
 import json
 
+from app.api.common.utils import get_connection
 from app.api.vulnerabilities.schemas import VulnerabilitySchema, VulnerabilityCreateSchema, VulnerabilityUpdateSchema
 
 router = Router(tags=["vulnerabilities"])
@@ -11,6 +11,7 @@ router = Router(tags=["vulnerabilities"])
 
 @router.get("/", response=List[VulnerabilitySchema])
 def list_vulnerabilities(request):
+    connection = get_connection()
     """Get all vulnerabilities"""
     with connection.cursor() as cursor:
         cursor.execute("SELECT vulnerability_id, title, description, severity, cve_reference, remediation_steps, discovery_date, patch_available FROM api_vulnerability")
@@ -31,6 +32,7 @@ def list_vulnerabilities(request):
 
 @router.post("/", response=VulnerabilitySchema)
 def create_vulnerability(request, vulnerability_data: VulnerabilityCreateSchema):
+    connection = get_connection()
     """Create a new vulnerability"""
     with connection.cursor() as cursor:
         # Check if vulnerability_name already exists
@@ -69,6 +71,7 @@ def create_vulnerability(request, vulnerability_data: VulnerabilityCreateSchema)
 
 @router.get("/{vulnerability_id}", response=VulnerabilitySchema)
 def get_vulnerability(request, vulnerability_id: int):
+    connection = get_connection()
     """Get vulnerability by ID"""
     with connection.cursor() as cursor:
         cursor.execute(
@@ -93,6 +96,7 @@ def get_vulnerability(request, vulnerability_id: int):
 
 @router.put("/{vulnerability_id}", response=VulnerabilitySchema)
 def update_vulnerability(request, vulnerability_id: int, vulnerability_data: VulnerabilityUpdateSchema):
+    connection = get_connection()
     """Update an existing vulnerability"""
     with connection.cursor() as cursor:
         # Check if vulnerability exists
@@ -180,6 +184,7 @@ def update_vulnerability(request, vulnerability_id: int, vulnerability_data: Vul
 
 @router.delete("/{vulnerability_id}")
 def delete_vulnerability(request, vulnerability_id: int):
+    connection = get_connection()
     """Delete a vulnerability"""
     with connection.cursor() as cursor:
         # Check if vulnerability exists
