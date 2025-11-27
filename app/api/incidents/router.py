@@ -50,6 +50,7 @@ def list_detailed_incidents(
         where_clause = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
         # Get basic incident information
+
         cursor.execute(
             f"""
             SELECT i.incident_id, i.incident_type, i.description, i.severity, i.status,

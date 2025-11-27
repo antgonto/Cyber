@@ -91,13 +91,20 @@ const Sidebar = () => {
           onClick: () => navigate('/settings'),
           isSelected: location.pathname === '/settings',
           icon: <EuiIcon type="gear" />,
+        },
+        {
+          id: '11',
+          name: 'Cyber IDS',
+          onClick: () => navigate('/cyber-ids'),
+          isSelected: location.pathname === '/cyber-ids',
+          icon: <EuiIcon type="securityApp" />,
         }
       ]
     }
   ];
 
   return (
-    <div style={{ width: '280px', height: '100%', background: '#1a1c21', padding: '16px' }}>
+    <div style={{ width: '200px', height: '100%', background: '#1a1c21', padding: '16px' }}>
       <EuiFlexGroup alignItems="center" gutterSize="s">
         <EuiFlexItem grow={false}>
           <EuiIcon type="securityApp" size="xl" />

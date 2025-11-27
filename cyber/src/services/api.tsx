@@ -128,5 +128,13 @@ export const riskService = {
   getRiskScoreById: (incident_id: number) => api.get(`/app/v1/cyber/risk/risk_score/${incident_id}`),
 };
 
+export const cyberidsappi = {
+
+  getHealth: async () => api.get(`/app/v1/cyber/ml/health`),
+  getMetrics: async () => api.get(`/app/v1/cyber/ml/metrics`),
+  trainModel: async (trainingConfig) => api.post(`/app/v1/cyber/ml/train`, trainingConfig),
+  predict: async (flows, threshold = 0.5) => api.post(`/app/v1/cyber/ml/predict`, {flows, threshold,}),
+};
+
 
 export default api;

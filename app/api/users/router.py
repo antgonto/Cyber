@@ -72,6 +72,7 @@ def create_user(request, user_data: UserCreateSchema):
         )
 
         row = cursor.fetchone()
+        connection.commit()
         print("user_id", row[0])
         user = {
             "user_id": row[0],
@@ -123,23 +124,23 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         update_fields = []
         params = []
 
-        if user_data.username:
+        if user_data.username is not None:
             update_fields.append("username = %s")
             params.append(user_data.username)
 
-        if user_data.email:
+        if user_data.email is not None:
             update_fields.append("email = %s")
             params.append(user_data.email)
 
-        if user_data.password:
+        if user_data.password is not None:
             update_fields.append("password = %s")
             params.append(make_password(user_data.password))
 
-        if user_data.role:
+        if user_data.role is not None:
             update_fields.append("role = %s")
             params.append(user_data.role)
 
-        if user_data.is_active:
+        if user_data.is_active is not None:
             update_fields.append("is_active = %s")
             params.append(user_data.is_active)
 
@@ -150,18 +151,19 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
                 [user_id]
             )
             row = cursor.fetchone()
+
             user = {
                 "user_id": row[0],
                 "username": row[1],
                 "email": row[2],
                 "role": row[3],
-                "is_active": row[4],
-                "last_login": row[5],
+                "last_login": row[4],
+                "is_active": row[5],
                 "date_joined": row[6],
             }
             return user
 
-        # Add asset_id to params for WHERE clause
+        # Add user_id to params for WHERE clause
         params.append(user_id)
 
         # Execute update query
@@ -176,6 +178,7 @@ def update_user(request, user_id: int, user_data: UserUpdateSchema):
         )
 
         row = cursor.fetchone()
+        connection.commit()
         user = {
             "user_id": row[0],
             "username": row[1],
@@ -200,6 +203,7 @@ def delete_user(request, user_id: int):
 
         # Delete user
         cursor.execute("DELETE FROM api_user WHERE user_id = %s", [user_id])
+        connection.commit()
         return {"success": True}
 
 
@@ -221,6 +225,7 @@ def log_user_activity(request, activity: dict):
                 json.dumps(activity["details"])
             ]
         )
+        connection.commit()
 
     return {"success": True, "message": "Activity logged"}
 
@@ -254,6 +259,7 @@ def create_activity_log(request, payload: UserActivityLogCreateSchema):
         )
 
         row = cursor.fetchone()
+        connection.commit()
         return {
             "log_id": row[0],
             "user_id": row[1],
@@ -397,6 +403,7 @@ def update_activity_log(request, log_id: int, payload: UserActivityLogUpdateSche
         )
 
         row = cursor.fetchone()
+        connection.commit()
         return {
             "log_id": row[0],
             "user_id": row[1],
@@ -418,4 +425,5 @@ def delete_activity_log(request, log_id: int):
             return HttpResponse(status=404, content=json.dumps({"detail": "Activity log not found"}))
 
         cursor.execute("DELETE FROM user_activity_logs WHERE log_id = %s", [log_id])
+        connection.commit()
         return 204, None

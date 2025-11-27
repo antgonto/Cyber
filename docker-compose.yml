@@ -1,17 +1,4 @@
 services:
-  entrypoint:
-    container_name: entrypoint
-    build:
-      context: .
-      dockerfile: Dockerfile
-    platform: linux/amd64
-    command: sh /code/entrypoint.sh
-    env_file:
-      - ./.env
-    volumes:
-      - .:/code
-    networks:
-      - cyber_network
 
   django:
     container_name: django
@@ -19,19 +6,27 @@ services:
       context: .
       dockerfile: Dockerfile
     platform: linux/amd64
-    command: sh -c "python3 manage.py migrate && python3 -m daphne -b 0.0.0.0 app.asgi:application --port 8000"
+    restart: always
+    command: sh /code/entrypoint.sh
     env_file:
       - ./.env
     volumes:
       - .:/code
+      - ./data:/code/data
+      - ./artifacts:/code/artifacts
     healthcheck:
-      test: curl --fail http://django:8000/app/v1/cyber/docs || exit 1
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/app/v1/cyber/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     ports:
       - "8000:8000"
     depends_on:
-      - entrypoint
-      - redis
-      - cyber_db
+      redis:
+        condition: service_started
+      cyber_db:
+        condition: service_healthy
     networks:
       - cyber_network
 
@@ -60,9 +55,10 @@ services:
   redis:
     container_name: redis
     image: redis:8.0-M04-bookworm
-    command: /bin/sh -c 'redis-server --requirepass ${REDIS_PASSWORD}'
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    restart: always
+    command: /bin/sh -c 'redis-server --requirepass $${REDIS_PASSWORD}'
+    env_file:
+      - ./.env
     volumes:
       - redis_data:/data
     networks:
@@ -73,15 +69,17 @@ services:
     build:
       context: ./cyber
       dockerfile: Dockerfile
+    restart: always
     ports:
       - "3000:80"
     volumes:
       - ./cyber:/app
       - /app/node_modules
     depends_on:
-      - django
+      django:
+        condition: service_healthy
     environment:
-      - REACT_APP_API_URL=http://django:8000/api
+      - REACT_APP_API_BASE_URL=http://django:8000/app/v1/cyber
     networks:
       - cyber_network
 

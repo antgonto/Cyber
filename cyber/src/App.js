@@ -21,6 +21,7 @@ import ThreatIntelligenceList from "./pages/ThreatIntelligenceList";
 import IncidentDashboard from "./pages/View";
 import SettingsMenu from "./pages/SettingsMenu";
 import IncidentRiskDashboard from "./pages/IncidentRiskDashboard";
+import CyberIDS from "./pages/CyberIDS";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
                 <Route path="/dashboard" element={<IncidentDashboard />} />
                 <Route path="/risk_dashboard" element={<IncidentRiskDashboard />} />
                 <Route path="/settings" element={<SettingsMenu />} />
+                <Route path="/cyber-ids" element={<CyberIDS />} />
                 {/* Additional routes can be added here */}
               </Routes>
             </EuiFlexItem>

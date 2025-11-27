@@ -182,3 +182,51 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ==================== Cyber IDS Configuration ====================
+
+# Cyber IDS data and artifact directories
+CYBER_IDS_DATA_DIR = os.path.join(BASE_DIR, "data", "cse-cic-ids2018")
+CYBER_IDS_ARTIFACT_DIR = os.path.join(BASE_DIR, "artifacts", "ids")
+
+# Ensure artifact directories exist
+os.makedirs(CYBER_IDS_ARTIFACT_DIR, exist_ok=True)
+os.makedirs(os.path.join(CYBER_IDS_ARTIFACT_DIR, "models"), exist_ok=True)
+os.makedirs(os.path.join(CYBER_IDS_ARTIFACT_DIR, "metrics"), exist_ok=True)
+os.makedirs(os.path.join(CYBER_IDS_ARTIFACT_DIR, "pipeline"), exist_ok=True)
+os.makedirs(os.path.join(CYBER_IDS_ARTIFACT_DIR, "runs"), exist_ok=True)
+
+# Default model configuration
+CYBER_IDS_DEFAULT_MODEL = "latest.joblib"
+CYBER_IDS_DECISION_THRESHOLD = 0.5
+
+# Logging configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "cyber_ids": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+

@@ -1,5 +1,4 @@
 from ninja import NinjaAPI, Swagger
-import importlib.util
 
 api = NinjaAPI(
     title="Cyber API",
@@ -25,6 +24,7 @@ routers = [
     ("/settings/", "app.api.settings.router.router", ["settings"]),
     ("/dashboard/", "app.api.dashboard.router.router", ["dashboard"]),
     ("/risk/", "app.api.risk.router.router", ["risk"]),
+    ("/ml/", "app.api.cyber_ids.router.router", ["cyber-ids"]),
 ]
 
 # Track which routers have been added

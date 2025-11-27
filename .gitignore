@@ -4,3 +4,25 @@
 /node_modules/
 /node_modules/*
 yarn.lock
+
+# Cyber IDS artifacts and data
+/artifacts/
+/artifacts/*
+/data/cse-cic-ids2018/
+/data/cse-cic-ids2018/*
+
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Jupyter notebooks (if used for analysis)
+.ipynb_checkpoints/
+*.ipynb

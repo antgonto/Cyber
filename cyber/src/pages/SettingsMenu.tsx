@@ -100,7 +100,7 @@ const actions = [
 ];
 
 // 5 columns x 4 rows = 20 tiles total
-const GRID_SIZE = 5 * 4;
+const GRID_SIZE = 3 * 4;
 
 const SettingsMenu: React.FC = () => {
   const [selected, setSelected] = useState<string[]>([]);
@@ -128,7 +128,7 @@ const SettingsMenu: React.FC = () => {
       <EuiSpacer size="xl" />
       <EuiFlexGrid columns={4} gutterSize="l">
         {actions.map(action => (
-          <EuiFlexItem key={action.id} style={{ minHeight: 200 }}>
+          <EuiFlexItem key={action.id} style={{ minHeight: 150 }}>
             <EuiCard
               icon={<EuiIcon type={action.iconType} size="xxl" />}
               title={action.title}
@@ -143,7 +143,7 @@ const SettingsMenu: React.FC = () => {
         ))}
 
         {Array.from({ length: blankCount }).map((_, idx) => (
-          <EuiFlexItem key={`blank-${idx}`} style={{ minHeight: 200 }}>
+          <EuiFlexItem key={`blank-${idx}`} style={{ minHeight: 150 }}>
             {/* empty space */}
           </EuiFlexItem>
         ))}
